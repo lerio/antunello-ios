@@ -7,6 +7,7 @@
  * silent data-corruption bug into a loud, immediate error.
  */
 
+import { formatCurrency } from '../domain/currency';
 import { getCurrencyFractionDigits } from '../domain/currency-amount-input';
 
 /** Currency -> expected fraction digits, for the currencies the app supports. */
@@ -66,13 +67,65 @@ export function assertIntlSupport(): void {
 }
 
 /**
+ * Asserts that currency formatting behaves as the app expects.
+ *
+ * `formatCurrency` renders EUR in Italian locale (`1234,56 €`), matching the web
+ * app rather than letting the platform pick. That makes the output depend on the
+ * engine's ICU data, which differs between V8 and Hermes.
+ *
+ * The assertions deliberately test *properties* — which separator is used, how
+ * many decimals survive — rather than exact strings. Exact matches would fail on
+ * a legitimate CLDR revision (the space before `€` is a non-breaking space, for
+ * instance) while telling us nothing useful. Properties catch the failures that
+ * matter: a swapped decimal separator, or yen gaining cents.
+ *
+ * @throws {Error} If formatting diverges from the expected convention.
+ */
+export function assertCurrencyFormatting(): void {
+  const problems: string[] = [];
+
+  // Amounts under 1000 are chosen deliberately: Italian CLDR sets
+  // `minimumGroupingDigits: 2`, so grouping only appears at five integer digits
+  // or more. Staying below that keeps the decimal separator unambiguous —
+  // "1.234,50" contains a dot, but as a grouping separator, not a decimal one.
+
+  const eur = formatCurrency(0.5, 'EUR');
+  if (!eur.includes(',50')) {
+    problems.push(`EUR decimal separator should be ",": got "${eur}"`);
+  }
+
+  const usd = formatCurrency(0.5, 'USD');
+  if (!usd.includes('.50')) {
+    problems.push(`USD decimal separator should be ".": got "${usd}"`);
+  }
+
+  // Yen has no minor unit, so 1234.6 must round to 1235 rather than keep the
+  // 6. Comparing digits only sidesteps the thousands separator, which is
+  // legitimately a comma in "￥1,235".
+  const jpyDigits = formatCurrency(1234.6, 'JPY').replace(/\D/g, '');
+  if (jpyDigits !== '1235') {
+    problems.push(
+      `JPY should round to whole yen: 1234.6 formatted as "${formatCurrency(1234.6, 'JPY')}"`,
+    );
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Currency formatting differs from the web app, so amounts would render ` +
+        `differently on the two:\n  ${problems.join('\n  ')}`,
+    );
+  }
+}
+
+/**
  * Runs every runtime guard, logging a single summary line in development.
  *
  * Call once from the root layout, before rendering anything that formats money.
  */
 export function runRuntimeChecks(): void {
   assertIntlSupport();
+  assertCurrencyFormatting();
   if (__DEV__) {
-    console.log('[runtime-check] Intl currency precision verified');
+    console.log('[runtime-check] Intl precision and currency formatting verified');
   }
 }

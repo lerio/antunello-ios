@@ -1,3 +1,4 @@
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { ScrollView, StyleSheet, Text, useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
+import { persistOptions, queryClient } from '@/lib/query-client';
 import { runRuntimeChecks } from '@/lib/runtime-check';
 
 SplashScreen.preventAutoHideAsync();
@@ -21,15 +23,17 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {/* Privacy sits outside auth: it is a display preference that survives
-          sign-out rather than being tied to the session. */}
-      <PrivacyProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
-      </PrivacyProvider>
-    </ThemeProvider>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        {/* Privacy sits outside auth: it is a display preference that survives
+            sign-out rather than being tied to the session. */}
+        <PrivacyProvider>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+        </PrivacyProvider>
+      </ThemeProvider>
+    </PersistQueryClientProvider>
   );
 }
 

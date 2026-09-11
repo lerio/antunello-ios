@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { clearQueryCache } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 
 type AuthState = {
@@ -61,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    // The persisted query cache holds transaction titles and amounts in plain
+    // SQLite, so it must not outlive the session.
+    await clearQueryCache();
   }, []);
 
   const value = useMemo<AuthState>(

@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/currency-amount-input.ts
  * @upstream-sha256 3e4fd41566bbe697e132a2c8ee9ce1a960bfec8b7c4c7227a231691ae4c265c9
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

@@ -71,6 +71,15 @@ export const DOMAIN_MAP = [
     local: 'split-transactions.ts',
     parity: 'exact',
   },
+  // Generic pagination for PostgREST's 1000-row cap. Pure, so it vendors
+  // cleanly — and its off-by-one behaviour decides whether the year view
+  // silently truncates, which makes it worth drift-checking rather than
+  // hand-porting.
+  { upstream: 'utils/supabase/fetch-all.ts', local: 'fetch-all.ts', parity: 'exact' },
+  // Display convention, not just formatting: EUR is rendered in Italian locale
+  // (`1.234,56 €`), so the web app does not show `€1,234.56`. Vendored so both
+  // apps agree on how money looks, rather than letting the platform decide.
+  { upstream: 'utils/currency.ts', local: 'currency.ts', parity: 'exact' },
 ];
 
 /** Marker line that identifies a file as vendored and locates its header. */

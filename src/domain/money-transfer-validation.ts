@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/money-transfer-validation.ts
  * @upstream-sha256 a332fd9294f5e56c82794dccb7e3a680d206e854779e1edec06df0c0fb236b74
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

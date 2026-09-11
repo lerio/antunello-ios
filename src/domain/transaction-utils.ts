@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/transaction-utils.ts
  * @upstream-sha256 9431ae44b07b52b606e5cbe492b6288684fe44a57e715ff164a3aacb9c78e359
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

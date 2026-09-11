@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/tr-bonuses.ts
  * @upstream-sha256 3296b306fd65c4931495f757a5ed5d6164a0fe49c906f4c7041e1d1f342a5cf1
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

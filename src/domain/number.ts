@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/number.ts
  * @upstream-sha256 cf6a206f33d4c27e70651beb161a975c6912d53c928a2c493a56df6edc38dc12
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

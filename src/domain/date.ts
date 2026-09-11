@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/date.ts
  * @upstream-sha256 2357233a6d9f8ab903577a3ad7079ae3989ba38994707d2b48f79679e18146ab
- * @vendored-on 2026-09-10
+ * @vendored-on 2026-09-11
  * @parity exact
  * @divergences none
  *

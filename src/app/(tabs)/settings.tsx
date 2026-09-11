@@ -15,6 +15,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
+import { fetchMonthTransactions } from '@/features/transactions/queries';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 
@@ -128,35 +129,56 @@ export default function SettingsScreen() {
 }
 
 /**
- * Proves that row-level security resolves the signed-in user.
+ * Diagnostics for the data layer.
  *
- * A known Supabase issue on React Native has `signInWithPassword` succeed while
- * `auth.uid()` evaluates to null for later queries, so every RLS-scoped read
- * returns nothing and the app looks signed in but empty. Counting rows gives
- * that failure a visible symptom. Delete once a real data screen makes it
- * obvious on its own.
+ * Two things this proves that are otherwise awkward to check:
+ *
+ *  - **Row-level security resolves the signed-in user.** A known Supabase issue
+ *    on React Native has `signInWithPassword` succeed while `auth.uid()`
+ *    evaluates to null for later queries, so every RLS-scoped read returns
+ *    nothing and the app looks signed in but empty.
+ *  - **The month fetcher works end to end** — query, split expansion, sort.
+ *    A wrong split expansion would otherwise only show up as a puzzling number
+ *    in the month view.
+ *
+ * Delete once real screens make both obvious on their own.
  */
 function DataAccessCheck() {
   const theme = useTheme();
   const [state, setState] = useState<
-    { status: 'loading' } | { status: 'error'; message: string } | { status: 'ok'; count: number }
+    | { status: 'loading' }
+    | { status: 'error'; message: string }
+    | { status: 'ok'; total: number; month: number; monthLabel: string; splits: number }
   >({ status: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
-      const { count, error } = await supabase
-        .from('transactions')
-        .select('id', { count: 'exact', head: true });
+      const now = new Date();
+
+      const [countResult, monthRows] = await Promise.all([
+        supabase.from('transactions').select('id', { count: 'exact', head: true }),
+        fetchMonthTransactions(now.getFullYear(), now.getMonth() + 1),
+      ]);
 
       if (cancelled) return;
 
-      if (error) {
-        setState({ status: 'error', message: `${error.code ?? ''} ${error.message}`.trim() });
-      } else {
-        setState({ status: 'ok', count: count ?? 0 });
+      if (countResult.error) {
+        setState({
+          status: 'error',
+          message: `${countResult.error.code ?? ''} ${countResult.error.message}`.trim(),
+        });
+        return;
       }
+
+      setState({
+        status: 'ok',
+        total: countResult.count ?? 0,
+        month: monthRows.length,
+        monthLabel: now.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+        splits: monthRows.filter((t) => t.split_across_year).length,
+      });
     }
 
     void run();
@@ -168,7 +190,7 @@ function DataAccessCheck() {
   return (
     <View style={[styles.card, { backgroundColor: theme.card }]}>
       <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
-        RLS-scoped read of transactions
+        Data access
       </ThemedText>
 
       {state.status === 'loading' ? <ActivityIndicator /> : null}
@@ -180,9 +202,15 @@ function DataAccessCheck() {
       ) : null}
 
       {state.status === 'ok' ? (
-        <ThemedText style={styles.mono}>
-          {state.count.toLocaleString('en-US')} {state.count === 1 ? 'row' : 'rows'} visible
-        </ThemedText>
+        <>
+          <ThemedText style={styles.mono}>
+            {state.total.toLocaleString('en-US')} rows visible in total
+          </ThemedText>
+          <ThemedText style={styles.mono}>
+            {state.month.toLocaleString('en-US')} this month ({state.monthLabel}),{' '}
+            {state.splits} split
+          </ThemedText>
+        </>
       ) : null}
     </View>
   );
