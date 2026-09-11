@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { MonthView } from '@/features/transactions/month-view';
 
 export default function TransactionsScreen() {
-  return (
-    <PlaceholderScreen
-      title="Transactions"
-      detail="Month pager, day-grouped list and the add/edit sheet — Phase 1."
-    />
-  );
+  return <MonthView />;
 }

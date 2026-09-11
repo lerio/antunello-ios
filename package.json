@@ -48,7 +48,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
-    "test": "tsx --test src/domain/*.test.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "vendor": "node scripts/vendor-domain.mjs",
     "vendor:check": "node scripts/vendor-domain.mjs --check",
     "parity": "node scripts/parity-check.mjs"
