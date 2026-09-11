@@ -3,6 +3,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme } from 'react-native';
 
+import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { PrivacyProvider } from '@/features/privacy/privacy-provider';
 import { runRuntimeChecks } from '@/lib/runtime-check';
 
 SplashScreen.preventAutoHideAsync();
@@ -12,44 +14,74 @@ SplashScreen.preventAutoHideAsync();
  *
  * The tab bar lives one level down, in `(tabs)`, so that screens presented as
  * full-screen modals — the transaction form, the pending-transaction wizard —
- * are siblings of it and therefore cover it. That is the native equivalent of
+ * can be siblings of it and therefore cover it. That is the native equivalent of
  * the web app hiding its bottom nav on the add/edit routes.
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [ready, setReady] = useState(false);
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Privacy sits outside auth: it is a display preference that survives
+          sign-out rather than being tied to the session. */}
+      <PrivacyProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </PrivacyProvider>
+    </ThemeProvider>
+  );
+}
+
+/**
+ * Chooses between the signed-in and signed-out stacks.
+ *
+ * Kept separate from `RootLayout` so it can read the auth context, which only
+ * exists inside `AuthProvider`.
+ */
+function RootNavigator() {
+  const { session, isLoading } = useAuth();
   const [startupError, setStartupError] = useState<Error | null>(null);
 
   useEffect(() => {
     try {
       // Guards capabilities that vary by JS engine; see lib/runtime-check.
       runRuntimeChecks();
-      setReady(true);
     } catch (error) {
       setStartupError(error instanceof Error ? error : new Error(String(error)));
-    } finally {
-      SplashScreen.hideAsync();
     }
   }, []);
 
+  // The splash stays up until the stored session has been read, so a signed-in
+  // user never sees the sign-in screen flash on a cold start.
+  useEffect(() => {
+    if (!isLoading || startupError) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading, startupError]);
+
   if (startupError) return <StartupFailure error={startupError} />;
-  if (!ready) return null;
+  if (isLoading) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
   );
 }
 
 /**
  * Shown when a startup guard fails.
  *
- * A capability mismatch would corrupt money silently, so it has to be loud —
- * but a bare stack trace on a phone is unreadable. The guards' messages explain
- * what broke and how to fix it, so they are the whole screen.
+ * A capability mismatch would corrupt money silently, so it has to be loud — but
+ * a stack trace is unreadable on a phone. The guards' messages explain what
+ * broke and how to fix it, so they are the whole screen.
  */
 function StartupFailure({ error }: { error: Error }) {
   return (

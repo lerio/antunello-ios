@@ -185,6 +185,10 @@ file.
   verifies currency precision at startup and fails loudly, because a wrong answer
   would silently corrupt split rounding.
 - **No Supabase Realtime.** Refresh on foreground and on pull-to-refresh.
+- **Privacy mode redacts; it never blurs.** `filter` is declared for Android only
+  in React Native and silently does nothing on iOS. Hide values with
+  `<PrivacyValue>`, and set its `hidden` prop to reproduce the web app's
+  selective rules. See PARITY.md.
 
 ---
 

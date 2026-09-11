@@ -171,6 +171,32 @@ pull-to-refresh, and surfaces remote changes as a transient toast. Supabase
 Realtime is deliberately unused — the web app removed it for performance, and on
 iOS a backgrounded socket drops silently.
 
+### Privacy mode redacts instead of blurring
+
+The web app hides financial values with `filter: blur(6px)`. **React Native
+declares that style for Android only.** Its platform implementations live under
+`ReactCommon/react/renderer/components/view/platform/android`, and there is no
+iOS counterpart, so on iOS the style is accepted and silently does nothing —
+confirmed on a device, where values stayed fully readable.
+
+This app therefore **redacts**: it renders the value with a transparent colour
+and a filled background, so the block occupies exactly the space the value would
+have. The property that mattered about the web app's blur is preserved — layout
+is identical whether or not privacy mode is on, so toggling never reflows the
+screen.
+
+Two consequences:
+
+- The block's width reveals how many digits a value has. That is inherent to
+  redaction and reads the way a redacted document does; the digits themselves
+  are not recoverable.
+- `sort`-style visual comparison is no longer possible while privacy is on.
+
+The **selective** rules are unchanged: in the transaction list only income is
+hidden, while day headers, summary figures and the balance total hide
+unconditionally. This is expressed by the `hidden` prop on `PrivacyValue`, and
+must be audited call-site by call-site when screens are built.
+
 ### Charts
 
 Feature parity, not pixel parity. The anchored balance chart keeps its defining
