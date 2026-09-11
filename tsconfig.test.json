@@ -1,0 +1,17 @@
+{
+  // Tests run under Node (via tsx), not React Native. The two environments
+  // disagree about enough that sharing one config produces false errors: the
+  // app config resolves modules the way Metro does ("bundler", react-native
+  // conditions, DOM libs) which does not satisfy Node's `node:` protocol
+  // builtins. Splitting them keeps each honest.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.test.ts", "src/domain/**/*.ts", "scripts/**/*.mjs"],
+  "exclude": ["node_modules"]
+}
