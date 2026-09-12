@@ -86,6 +86,116 @@ export async function fetchSplitSources(year: number): Promise<Transaction[]> {
 }
 
 /**
+ * Only the columns the dashboard summaries and split expansion read.
+ *
+ * A 30-day window is fetched three times over for the comparison tables, so
+ * pulling full rows would triple a payload that is almost entirely discarded.
+ */
+const RANGE_COLUMNS =
+  'id, amount, currency, type, main_category, sub_category, date, eur_amount, hide_from_totals, is_money_transfer, split_across_year';
+
+type RangeRow = Pick<
+  Transaction,
+  | 'id'
+  | 'amount'
+  | 'currency'
+  | 'type'
+  | 'main_category'
+  | 'sub_category'
+  | 'date'
+  | 'eur_amount'
+  | 'hide_from_totals'
+  | 'is_money_transfer'
+  | 'split_across_year'
+>;
+
+/**
+ * Fetches transactions within an arbitrary date range, with split instances
+ * expanded into it.
+ *
+ * The range is inclusive of `start` and of `end`, expressed as a half-open
+ * interval internally so a transaction late on the final day is not lost to a
+ * boundary comparison.
+ *
+ * Split sources are fetched from a **year either side** of the range. A split's
+ * rolling window runs twelve months from its own month, so a source from the
+ * year before can still be contributing to the range's first days, and the extra
+ * year forward costs nothing while guaranteeing nothing is missed.
+ *
+ * @param start `YYYY-MM-DD`, inclusive.
+ * @param end `YYYY-MM-DD`, inclusive.
+ * @returns Transactions in the range, newest first.
+ */
+export async function fetchRangeTransactions(
+  start: string,
+  end: string,
+): Promise<Transaction[]> {
+  const rangeStart = new Date(`${start}T00:00:00.000Z`);
+  const rangeEndExclusive = new Date(`${end}T00:00:00.000Z`);
+  rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
+
+  const rangeStartIso = rangeStart.toISOString();
+  const rangeEndExclusiveIso = rangeEndExclusive.toISOString();
+
+  const rows = (await fetchAllBatches<RangeRow>((from, to) =>
+    supabase
+      .from('transactions')
+      .select(RANGE_COLUMNS)
+      .gte('date', rangeStartIso)
+      .lt('date', rangeEndExclusiveIso)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(from, to),
+  )) as unknown as Transaction[];
+
+  // Split sources appear in the range as instances rather than as themselves,
+  // so they are held back and re-added below.
+  const regular = rows.filter((row) => !row.split_across_year);
+
+  const startYear = rangeStart.getUTCFullYear();
+  const endYear = rangeEndExclusive.getUTCFullYear();
+
+  const splitSources = (await fetchAllBatches<RangeRow>((from, to) =>
+    supabase
+      .from('transactions')
+      .select(RANGE_COLUMNS)
+      .eq('split_across_year', true)
+      .gte('date', `${startYear - 1}-01-01T00:00:00.000Z`)
+      .lt('date', `${endYear + 1}-01-01T00:00:00.000Z`)
+      .order('date', { ascending: false })
+      .range(from, to),
+  )) as unknown as Transaction[];
+
+  // Expanded a year at a time: an instance is generated for whatever year is
+  // asked for, and each source belongs to exactly one.
+  const sourcesByYear = new Map<number, Transaction[]>();
+  for (const source of splitSources) {
+    const year = new Date(source.date).getUTCFullYear();
+    const bucket = sourcesByYear.get(year);
+    if (bucket) bucket.push(source);
+    else sourcesByYear.set(year, [source]);
+  }
+
+  const now = new Date();
+  const expanded: Transaction[] = [];
+  for (let year = startYear; year <= endYear; year += 1) {
+    const yearSplits = sourcesByYear.get(year);
+    if (!yearSplits?.length) continue;
+    expanded.push(...expandSplitTransactionsForYear(yearSplits, year, now));
+  }
+
+  // Only the instances that actually land inside the range.
+  const startMs = rangeStart.getTime();
+  const endMs = rangeEndExclusive.getTime();
+  const inRange = expanded.filter((instance) => {
+    const at = new Date(instance.date).getTime();
+    return at >= startMs && at < endMs;
+  });
+
+  return sortTransactionsByDateInPlace([...regular, ...inRange]);
+}
+
+/**
  * Fetches a single transaction by id.
  *
  * Used by the edit screen, which may be opened directly — from a notification,
