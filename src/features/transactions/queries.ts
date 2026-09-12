@@ -86,6 +86,26 @@ export async function fetchSplitSources(year: number): Promise<Transaction[]> {
 }
 
 /**
+ * Fetches a single transaction by id.
+ *
+ * Used by the edit screen, which may be opened directly — from a notification,
+ * a deep link, or a cold start — so it cannot assume the row is in a cache.
+ *
+ * @param id The transaction id.
+ * @returns The transaction, or null if it does not exist or is not visible.
+ */
+export async function fetchTransaction(id: string): Promise<Transaction | null> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as Transaction) ?? null;
+}
+
+/**
  * Fetches one month of transactions with split instances expanded into it.
  *
  * @param year The calendar year.

@@ -3,15 +3,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   SectionList,
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { BottomTabInset, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { formatDateHeader } from '@/domain/date';
 import type { Transaction } from '@/domain/types';
@@ -19,6 +21,7 @@ import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import type { DayGroup } from '@/features/transactions/group-by-day';
+import { isOptimisticId } from '@/features/transactions/mutations';
 import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
 import {
   findMonthIndex,
@@ -54,9 +57,16 @@ export function MonthView() {
     [router],
   );
 
-  const handlePressTransaction = useCallback((_transaction: Transaction) => {
-    // Editing arrives with the transaction form; the row is already wired for it.
-  }, []);
+  const handlePressTransaction = useCallback(
+    (transaction: Transaction) => {
+      // A row that is still saving carries only a placeholder id, so there is
+      // no record to open yet. Brief in practice — it is replaced by the real
+      // row as soon as the insert returns.
+      if (isOptimisticId(transaction.id)) return;
+      router.push(`/transaction/${transaction.id}`);
+    },
+    [router],
+  );
 
   return (
     <Screen>
@@ -93,7 +103,32 @@ export function MonthView() {
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      <AddButton onPress={() => router.push('/transaction/new')} />
     </Screen>
+  );
+}
+
+/** Floating action button, clearing the tab bar and the home indicator. */
+function AddButton({ onPress }: { onPress: () => void }) {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Add transaction"
+      style={({ pressed }) => [
+        styles.fab,
+        {
+          backgroundColor: theme.tint,
+          bottom: BottomTabInset + insets.bottom + Spacing.three,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      <SymbolView name="plus" size={24} tintColor="#ffffff" />
+    </Pressable>
   );
 }
 
@@ -230,5 +265,14 @@ const styles = StyleSheet.create({
   },
   emptyDetail: {
     textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: Spacing.three,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -46,6 +46,52 @@ export type TransactionInput = {
   bonus_kind?: 'saveback' | 'round_up' | null;
 };
 
+/**
+ * Prefix identifying a row that exists only in the local cache.
+ *
+ * An optimistic insert appears in the list before the database has assigned it
+ * an id, so it is given a placeholder. That placeholder must never reach the
+ * database: `id` is a `uuid` column, and `22P02 invalid input syntax for type
+ * uuid` is what comes back if it does — an error that says nothing about the
+ * actual cause.
+ */
+export const OPTIMISTIC_ID_PREFIX = 'optimistic-';
+
+/**
+ * Whether a row is a local placeholder rather than a persisted record.
+ *
+ * @param id The id to test.
+ */
+export function isOptimisticId(id: string): boolean {
+  return id.startsWith(OPTIMISTIC_ID_PREFIX);
+}
+
+/**
+ * The signed-in user's id.
+ *
+ * Required on insert: the row-level security policy for `transactions` is
+ * `auth.uid() = user_id`, and `user_id` has no database default — so a row
+ * inserted without it fails with `42501 new row violates row-level security
+ * policy` rather than a helpful "column is required".
+ *
+ * Read from the local session rather than `auth.getUser()`. The id is already
+ * the one inside the access token, which is what the policy compares against, so
+ * a server round-trip would confirm nothing extra.
+ *
+ * @throws If there is no session.
+ */
+async function requireUserId(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user.id) {
+    throw new Error('You are not signed in.');
+  }
+
+  return session.user.id;
+}
+
 /** The month a date falls in, as the cache keys address it. */
 function monthOf(isoDate: string): { year: number; month: number } {
   const d = new Date(isoDate);
@@ -128,11 +174,11 @@ export function useAddTransaction() {
 
   return useMutation({
     mutationFn: async (input: TransactionInput): Promise<Transaction> => {
-      const payload = await withEurConversion(input);
+      const [payload, userId] = await Promise.all([withEurConversion(input), requireUserId()]);
 
       const { data, error } = await supabase
         .from('transactions')
-        .insert([payload])
+        .insert([{ ...payload, user_id: userId }])
         .select()
         .single();
 
@@ -193,6 +239,10 @@ export function useUpdateTransaction() {
       id: string;
       changes: Partial<TransactionInput>;
     }): Promise<Transaction> => {
+      if (isOptimisticId(id)) {
+        throw new Error('This transaction is still being saved. Try again in a moment.');
+      }
+
       // RLS silently refuses writes to bonus rows, so refuse them here where
       // the failure can actually be reported.
       const existing = await fetchTransaction(id);
@@ -238,6 +288,10 @@ export function useDeleteTransaction() {
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
+      if (isOptimisticId(id)) {
+        throw new Error('This transaction is still being saved. Try again in a moment.');
+      }
+
       const { data: existing } = await supabase
         .from('transactions')
         .select('bonus_kind')

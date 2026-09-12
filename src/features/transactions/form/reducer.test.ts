@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import type { TitleSuggestion } from '@/domain/types';
 import {
   MONEY_TRANSFER_CATEGORY,
   formReducer,
@@ -25,6 +26,23 @@ import {
 /** Applies a sequence of actions from a starting state. */
 function apply(state: FormState, ...actions: FormAction[]): FormState {
   return actions.reduce(formReducer, state);
+}
+
+/** A title suggestion, as the trigger would have recorded it. */
+function suggestion(overrides: Partial<TitleSuggestion> = {}): TitleSuggestion {
+  return {
+    id: 's1',
+    user_id: 'u1',
+    title: 'Tesco',
+    type: 'expense',
+    main_category: 'Groceries',
+    sub_category: 'Supermarket',
+    frequency: 1,
+    last_used_at: '2026-09-01T00:00:00.000Z',
+    created_at: '2026-09-01T00:00:00.000Z',
+    updated_at: '2026-09-01T00:00:00.000Z',
+    ...overrides,
+  };
 }
 
 /** A state with a valid expense filled in, for tests about something else. */
@@ -149,15 +167,7 @@ describe('title suggestions', () => {
   it('fills type, category and subcategory at once', () => {
     const state = apply(initialFormState(), {
       kind: 'applySuggestion',
-      value: {
-        id: 's1',
-        title: 'Tesco',
-        type: 'expense',
-        main_category: 'Groceries',
-        sub_category: 'Supermarket',
-        frequency: 1,
-        last_used_at: '2026-09-01T00:00:00.000Z',
-      },
+      value: suggestion(),
     });
 
     assert.equal(state.type, 'expense');
@@ -173,15 +183,7 @@ describe('title suggestions', () => {
   it('drops the auto-filled marker when that field is edited by hand', () => {
     const suggested = apply(initialFormState(), {
       kind: 'applySuggestion',
-      value: {
-        id: 's1',
-        title: 'Tesco',
-        type: 'expense',
-        main_category: 'Groceries',
-        sub_category: 'Supermarket',
-        frequency: 1,
-        last_used_at: '2026-09-01T00:00:00.000Z',
-      },
+      value: suggestion(),
     });
 
     const edited = apply(suggested, { kind: 'setSubCategory', value: 'Drugstore' });

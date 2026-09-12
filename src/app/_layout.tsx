@@ -71,6 +71,16 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(tabs)" />
+        {/* Full-screen modals, siblings of the tabs so they cover the tab bar.
+            They carry a header, which supplies their top inset. */}
+        <Stack.Screen
+          name="transaction/new"
+          options={{ headerShown: true, presentation: 'fullScreenModal', title: 'Add Transaction' }}
+        />
+        <Stack.Screen
+          name="transaction/[id]"
+          options={{ headerShown: true, presentation: 'fullScreenModal', title: 'Transaction' }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={!session}>

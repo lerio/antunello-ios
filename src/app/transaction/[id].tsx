@@ -1,0 +1,148 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet } from 'react-native';
+
+import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/themed-text';
+import { Spacing } from '@/constants/theme';
+import type { Transaction } from '@/domain/types';
+import { useFunds } from '@/features/funds/use-funds';
+import { formStateFromTransaction } from '@/features/transactions/form/from-transaction';
+import { TransactionForm } from '@/features/transactions/form/transaction-form';
+import { isOptimisticId } from '@/features/transactions/mutations';
+import { fetchTransaction } from '@/features/transactions/queries';
+import { messageOf } from '@/lib/errors';
+import { TX, qk } from '@/lib/query-keys';
+
+/** Marker in a synthesised split-instance id; see split-transactions.ts. */
+const SPLIT_MARKER = '::split::';
+
+/**
+ * Finds a transaction in whichever month is already cached.
+ *
+ * Editing always starts from a row the user just tapped in the month list, so
+ * the row is already in memory. Seeding the query with it means the form opens
+ * immediately instead of showing a spinner while a round-trip completes — the
+ * difference between this feeling instant and feeling slow.
+ *
+ * @param queryClient The client holding the caches.
+ * @param id The transaction id to find.
+ * @returns The cached row, or undefined if no cached month contains it.
+ */
+function findCachedTransaction(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+): Transaction | undefined {
+  for (const [, rows] of queryClient.getQueriesData<Transaction[]>({ queryKey: [TX, 'month'] })) {
+    const match = rows?.find((row) => row.id === id);
+    if (match) return match;
+  }
+  return undefined;
+}
+
+/**
+ * Edit a transaction.
+ *
+ * Presented as a full-screen modal, like the add screen, so it covers the tab
+ * bar and supplies its own navigation.
+ */
+export default function EditTransactionScreen() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  // A split instance is not a database row — its id is synthesised on the
+  // client as "<source>::split::YYYY-MM". Editing one has to act on the source,
+  // or the lookup would find nothing.
+  const sourceId = useMemo(
+    () => (id?.includes(SPLIT_MARKER) ? id.split(SPLIT_MARKER)[0] : id),
+    [id],
+  );
+
+  const { data: funds = [] } = useFunds();
+
+  const { data: transaction, isLoading, error } = useQuery({
+    queryKey: qk.one(sourceId ?? ''),
+    // An optimistic row has no database id, so there is nothing to fetch.
+    enabled: Boolean(sourceId) && !isOptimisticId(sourceId ?? ''),
+    // Seeded from the month list, so opening is instant. It is recorded as
+    // having just been fetched, so no immediate refetch replaces the form's
+    // contents mid-edit.
+    initialData: () => (sourceId ? findCachedTransaction(queryClient, sourceId) : undefined),
+    queryFn: () => fetchTransaction(sourceId!),
+    // The row is normally served from cache, so a fetch here is the unusual
+    // path — and when it fails it is worth saying so at once rather than after
+    // the default 1s + 2s backoff.
+    retry: false,
+  });
+
+  if (error) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText type="subtitle">Couldn’t load this transaction</ThemedText>
+        <ThemedText themeColor="textSecondary" style={styles.detail}>
+          {messageOf(error)}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // A row that is still saving has only a placeholder id. Its real one arrives
+  // with the server response, so there is nothing to edit yet.
+  if (sourceId && isOptimisticId(sourceId)) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator />
+        <ThemedText themeColor="textSecondary" style={styles.detail}>
+          This transaction is still being saved.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator />
+      </ThemedView>
+    );
+  }
+
+  if (!transaction) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText type="subtitle">Not found</ThemedText>
+        <ThemedText themeColor="textSecondary" style={styles.detail}>
+          This transaction no longer exists, or is not yours.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const state = formStateFromTransaction(transaction, 'edit', (fundId) => {
+    const fund = funds.find((f) => f.id === fundId);
+    return fund ? { id: fund.id, name: fund.name } : undefined;
+  });
+
+  return (
+    <TransactionForm
+      state={state}
+      transactionId={transaction.id}
+      onDone={() => router.back()}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    padding: Spacing.four,
+  },
+  detail: {
+    textAlign: 'center',
+  },
+});
