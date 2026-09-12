@@ -126,15 +126,19 @@ async function withEurConversion(
 }
 
 /**
- * Invalidates everything derived from a transaction write.
+ * Invalidates everything affected by a transaction write.
  *
- * Deliberately does **not** invalidate the bare `['tx']` root: the optimistic
- * update has just written the correct month, and invalidating it would discard
- * that and refetch, causing a visible flicker.
+ * **The month is included, and must be.** An earlier version excluded it on the
+ * reasoning that an optimistic update had already written the correct state. It
+ * had not: a delete made no optimistic change at all, and an insert left its
+ * placeholder row in place rather than replacing it with the saved one — so the
+ * list kept showing a deleted transaction and a created one stayed unopenable,
+ * since it still carried the placeholder id.
  *
- * A split write invalidates the month family as well, because split instances
- * are synthesised from a source row and bleed across months — the one place a
- * broad invalidation is correct.
+ * Refetching is cheap enough here and does not flash: a query keeps its current
+ * data while a refetch is in flight, so the list shows the old state for a
+ * moment rather than emptying. Optimistic updates still apply, so the common
+ * case is correct immediately and the refetch only confirms it.
  *
  * @param queryClient The client to invalidate against.
  * @param options What was written.
@@ -145,6 +149,7 @@ export function invalidateAfterWrite(
 ): void {
   // Prefixes, so each covers every period at once.
   const families: ReadonlyArray<readonly unknown[]> = [
+    [TX, 'month'],
     [TX, 'year'],
     [TX, 'range'],
     [TX, 'anchored'],
@@ -157,10 +162,8 @@ export function invalidateAfterWrite(
 
   if (options.split) {
     // Split instances are synthesised from a source row and appear in months
-    // beyond the source's own, so the whole month family has to go — the one
-    // place a broad invalidation is correct rather than wasteful.
+    // beyond the source's own, so the split-source caches have to go too.
     void queryClient.invalidateQueries({ queryKey: [TX, 'split'] });
-    void queryClient.invalidateQueries({ queryKey: [TX, 'month'] });
   }
 }
 
@@ -210,7 +213,17 @@ export function useAddTransaction() {
         sortByDate([optimistic, ...old]),
       );
 
-      return { key, previous };
+      return { key, previous, optimisticId: optimistic.id };
+    },
+
+    onSuccess: (created, _input, context) => {
+      // Swap the placeholder for the saved row as soon as the id exists. Until
+      // this happens the row carries a placeholder id, which cannot be opened —
+      // so tapping a freshly added transaction would do nothing.
+      if (!context) return;
+      queryClient.setQueryData<Transaction[]>(context.key, (old = []) =>
+        sortByDate(old.map((row) => (row.id === context.optimisticId ? created : row))),
+      );
     },
 
     onError: (_error, _input, context) => {
@@ -311,6 +324,36 @@ export function useDeleteTransaction() {
 
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
+    },
+
+    onMutate: async (id: string) => {
+      // Remove it from whichever month is showing it, rather than waiting for a
+      // refetch — a deleted row lingering on screen reads as the delete having
+      // failed.
+      const snapshots = new Map<readonly unknown[], Transaction[] | undefined>();
+
+      for (const [key, rows] of queryClient.getQueriesData<Transaction[]>({
+        queryKey: [TX, 'month'],
+      })) {
+        if (!rows) continue;
+
+        const next = rows.filter(
+          (row) => row.id !== id && row.parent_transaction_id !== id,
+        );
+        if (next.length === rows.length) continue;
+
+        snapshots.set(key, rows);
+        queryClient.setQueryData(key, next);
+      }
+
+      return { snapshots };
+    },
+
+    onError: (_error, _id, context) => {
+      if (!context) return;
+      for (const [key, rows] of context.snapshots) {
+        queryClient.setQueryData(key, rows);
+      }
     },
 
     onSettled: () => {

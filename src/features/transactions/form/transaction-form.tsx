@@ -198,7 +198,17 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
 
       <ScrollView
         contentContainerStyle={styles.content}
+        // Lets iOS inset the scroll view by the keyboard's height, so the lower
+        // fields and the save button can be scrolled clear of it, and a field
+        // focused near the bottom scrolls itself into view. Without this the
+        // keyboard simply covers the bottom of the form.
+        automaticallyAdjustKeyboardInsets
+        // Tapping a picker or Save while the keyboard is up should do that, not
+        // merely dismiss the keyboard first.
         keyboardShouldPersistTaps="handled"
+        // Dragging down on the form dismisses the keyboard, which is the
+        // expected gesture and also stops a scroll from fighting the sheet's
+        // swipe-to-dismiss.
         keyboardDismissMode="interactive">
         {showErrors && errorList ? (
           <View style={[styles.errorSummary, { backgroundColor: theme.card }]} accessibilityRole="alert">
