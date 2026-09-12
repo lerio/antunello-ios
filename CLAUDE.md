@@ -63,6 +63,33 @@ app targets iPhone only.
 npm start                       # Metro only — JS changes reload instantly
 ```
 
+**The app on the phone does not carry any JavaScript.** It is a debug build, so
+it fetches its bundle from Metro over the LAN at launch — the address is baked
+into the app as `ip.txt` (currently `<lan-address>:8081`) when it is installed.
+Metro therefore has to be running *before* the app is opened, and since Metro is
+a foreground process in a terminal, **closing or restarting that terminal breaks
+the app** until it is started again:
+
+> No script URL provided. Make sure the packager is running or you have embedded
+> a JS bundle in your application bundle.
+
+That message means exactly what it says and never indicates a code problem. Start
+`npm start`, then swipe the app away and reopen it — a relaunch alone may not be
+enough, since the failed launch is cached.
+
+If the Mac's LAN address changes (a different network, a new router), `ip.txt` is
+stale and no amount of restarting Metro will help: the phone is looking for a
+host that is gone. Check the two against each other —
+
+```bash
+ipconfig getifaddr en0
+cat ~/Library/Developer/Xcode/DerivedData/Antunello-*/Build/Products/Debug-iphoneos/Antunello.app/ip.txt
+```
+
+— and if they differ, rebuild with `npm run ios:device`, which rewrites the file.
+That also restarts the seven-day provisioning clock, so it is worth doing anyway
+when the app is close to expiring.
+
 Native changes, config changes, and dependency changes need a rebuild.
 
 ### First-time or after native changes
