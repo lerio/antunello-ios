@@ -193,6 +193,10 @@ const styles = StyleSheet.create({
   },
   total: {
     fontSize: 28,
+    // Explicit, because `ThemedText`'s default variant sets `lineHeight: 24`.
+    // Overriding only the font size leaves the glyphs overflowing that box, so
+    // the top of the number is clipped and it rides up under the label above.
+    lineHeight: 34,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },

@@ -731,6 +731,9 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     fontSize: 30,
+    // Set alongside the size rather than left to the default, which would clip
+    // the digits' ascent the way the Balance total was clipped.
+    lineHeight: 38,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
     paddingVertical: Spacing.two,
