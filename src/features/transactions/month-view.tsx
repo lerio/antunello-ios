@@ -72,11 +72,32 @@ export function MonthView() {
   // Stable identities, so a re-render of this screen does not make the list
   // treat every row as changed. Passing a fresh closure each render was causing
   // the whole month to re-render, which on a long month is visible as a stall.
+  const handleCategoryPress = useCallback(
+    (category: string) => {
+      router.push(`/transactions/category/${encodeURIComponent(category)}`);
+    },
+    [router],
+  );
+
+  const handleSubCategoryPress = useCallback(
+    (category: string, subCategory: string) => {
+      router.push(
+        `/transactions/category/${encodeURIComponent(category)}/${encodeURIComponent(subCategory)}`,
+      );
+    },
+    [router],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: Transaction }) => (
-      <TransactionRow transaction={item} onPress={handlePressTransaction} />
+      <TransactionRow
+        transaction={item}
+        onPress={handlePressTransaction}
+        onCategoryPress={handleCategoryPress}
+        onSubCategoryPress={handleSubCategoryPress}
+      />
     ),
-    [handlePressTransaction],
+    [handlePressTransaction, handleCategoryPress, handleSubCategoryPress],
   );
 
   const renderSectionHeader = useCallback(

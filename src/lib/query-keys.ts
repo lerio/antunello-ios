@@ -83,6 +83,15 @@ export const qk = {
   /** Bank transactions awaiting review. */
   pending: () => ['pending'] as const,
 
+  /**
+   * One category's transactions over a range.
+   *
+   * `subCategory` is null when the whole category is shown, so the two views do
+   * not share a key.
+   */
+  category: (category: string, subCategory: string | null, range: TimeRange) =>
+    ['category', category, subCategory ?? '*', range] as const,
+
   /** Full-text search results for a query string. */
   search: (query: string) => ['search', query] as const,
 

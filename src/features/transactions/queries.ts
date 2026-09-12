@@ -25,12 +25,14 @@
  */
 
 import { fetchAllBatches } from '@/domain/fetch-all';
+import { getStartDateForTimeRange } from '@/features/balance/balance-series';
 import {
   expandSplitTransactionsForMonth,
   expandSplitTransactionsForYear,
 } from '@/domain/split-transactions';
 import { sortTransactionsByDateInPlace } from '@/domain/transaction-utils';
 import type { Transaction } from '@/domain/types';
+import type { TimeRange } from '@/lib/query-keys';
 import { supabase } from '@/lib/supabase';
 
 /** Postgres error code for an undefined column — see `fetchSplitSources`. */
@@ -108,6 +110,43 @@ type RangeRow = Pick<
   | 'is_money_transfer'
   | 'split_across_year'
 >;
+
+/**
+ * Fetches one category's transactions over a range, optionally narrowed to a
+ * subcategory.
+ *
+ * **Split instances are not expanded here**, matching the web app. The list and
+ * chart on a category page therefore show a split source as the single row it
+ * is, rather than as twelve monthly slices — which is what the month view does,
+ * and a deliberate difference rather than an omission.
+ *
+ * @param category The main category.
+ * @param subCategory Optional subcategory to narrow to.
+ * @param timeRange The selected range, which sets the earliest date fetched.
+ */
+export async function fetchCategoryTransactions(
+  category: string,
+  subCategory: string | null,
+  timeRange: TimeRange,
+): Promise<Transaction[]> {
+  const startDate = getStartDateForTimeRange(timeRange);
+
+  return fetchAllBatches<Transaction>((from, to) => {
+    const lowerBound = startDate ?? '1900-01-01T00:00:00.000Z';
+
+    const base = supabase
+      .from('transactions')
+      .select('*')
+      .eq('main_category', category)
+      .gte('date', lowerBound)
+      .order('date', { ascending: false })
+      .range(from, to);
+
+    // Branched here rather than on the builder, so the result stays a single
+    // builder type the paginating helper accepts.
+    return subCategory ? base.eq('sub_category', subCategory) : base;
+  });
+}
 
 /**
  * Fetches transactions within an arbitrary date range, with split instances
