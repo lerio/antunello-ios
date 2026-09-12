@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
+import { SearchField } from '@/features/search/components/search-field';
 import { ViewTabs } from '@/features/transactions/components/view-tabs';
 import {
   findYearIndex,
@@ -49,6 +50,10 @@ export function YearView({ year, onSelectYear }: YearViewProps) {
 
   return (
     <Screen>
+      <View style={styles.searchRow}>
+        <SearchField onPress={() => router.push('/transactions/search')} />
+      </View>
+
       <View style={styles.viewTabs}>
         <ViewTabs value="year" onChange={(next) => next === 'month' && router.back()} />
       </View>
@@ -301,6 +306,10 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  searchRow: {
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+  },
   viewTabs: {
     paddingTop: Spacing.two,
   },

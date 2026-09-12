@@ -1,23 +1,14 @@
-import { SymbolView } from 'expo-symbols';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { memo, useCallback, useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  SectionList,
-  StyleSheet,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useMemo } from 'react';
+import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 
+import { AddTransactionButton } from '@/components/add-transaction-button';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Spacing } from '@/constants/theme';
-import { formatCurrency } from '@/domain/currency';
-import { formatDateHeader } from '@/domain/date';
+import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
-import { PrivacyValue } from '@/features/privacy/privacy-value';
+import { SearchField } from '@/features/search/components/search-field';
+import { DayHeader } from '@/features/transactions/components/day-header';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import { ViewTabs } from '@/features/transactions/components/view-tabs';
@@ -29,7 +20,6 @@ import {
   useAvailableMonths,
   type MonthOption,
 } from '@/features/transactions/use-available-months';
-import { useTheme } from '@/hooks/use-theme';
 
 /**
  * The month's transactions.
@@ -109,6 +99,10 @@ export function MonthView() {
 
   return (
     <Screen>
+      <View style={styles.searchRow}>
+        <SearchField onPress={() => router.push('/transactions/search')} />
+      </View>
+
       <View style={styles.viewTabs}>
         <ViewTabs value="month" onChange={(next) => next === 'year' && router.push('/transactions/year')} />
       </View>
@@ -145,31 +139,8 @@ export function MonthView() {
         />
       )}
 
-      <AddButton onPress={() => router.push('/transaction/new')} />
+      <AddTransactionButton onPress={() => router.push('/transaction/new')} />
     </Screen>
-  );
-}
-
-/** Floating action button, clearing the tab bar and the home indicator. */
-function AddButton({ onPress }: { onPress: () => void }) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Add transaction"
-      style={({ pressed }) => [
-        styles.fab,
-        {
-          backgroundColor: theme.tint,
-          bottom: BottomTabInset + insets.bottom + Spacing.three,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}>
-      <SymbolView name="plus" size={24} tintColor="#ffffff" />
-    </Pressable>
   );
 }
 
@@ -190,59 +161,6 @@ function usePeriodParams() {
   return { year, month };
 }
 
-/**
- * A sticky day header: the date on the left, the day's totals on the right.
- *
- * Both totals are always covered by privacy mode — unlike a transaction row,
- * where only income is hidden. A day total is an aggregate, so leaving it
- * readable would leak the sum of the very values being hidden.
- */
-const DayHeader = memo(function DayHeader({ day }: { day: DayGroup }) {
-  const theme = useTheme();
-  const isPositive = day.dailyTotal >= 0;
-
-  return (
-    <View
-      style={[
-        styles.dayHeader,
-        { backgroundColor: theme.background, borderBottomColor: theme.separator },
-      ]}>
-      <View style={styles.dayHeaderSide}>
-        <ThemedText themeColor="textSecondary" style={styles.dayLabel}>
-          {formatDateHeader(day.isoDate)}
-        </ThemedText>
-        {day.hiddenCount > 0 ? (
-          <SymbolView name="eye.slash" size={12} tintColor={theme.textSecondary} />
-        ) : null}
-      </View>
-
-      <View style={[styles.dayHeaderSide, styles.dayHeaderTotals]}>
-        <PrivacyValue
-          style={[styles.dayTotal, { color: isPositive ? theme.income : theme.expense }]}
-          numberOfLines={1}>
-          {formatCurrency(Math.abs(day.dailyTotal), 'EUR')}
-        </PrivacyValue>
-
-        {day.dailySplitTotal !== 0 ? (
-          <View style={styles.splitTotal}>
-            <SymbolView
-              name="arrow.triangle.branch"
-              size={11}
-              tintColor={theme.textSecondary}
-            />
-            <PrivacyValue
-              themeColor="textSecondary"
-              style={styles.daySplit}
-              numberOfLines={1}>
-              {formatCurrency(Math.abs(day.dailySplitTotal), 'EUR')}
-            </PrivacyValue>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-});
-
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
     <View style={styles.centered}>
@@ -255,6 +173,10 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 const styles = StyleSheet.create({
+  searchRow: {
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+  },
   viewTabs: {
     paddingTop: Spacing.two,
   },
@@ -265,41 +187,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: Spacing.five,
   },
-  dayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  dayHeaderSide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  dayHeaderTotals: {
-    flexShrink: 1,
-  },
-  dayLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dayTotal: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-  },
-  splitTotal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  daySplit: {
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -309,14 +196,5 @@ const styles = StyleSheet.create({
   },
   emptyDetail: {
     textAlign: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: Spacing.three,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
