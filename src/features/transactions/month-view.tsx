@@ -20,6 +20,7 @@ import type { Transaction } from '@/domain/types';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
+import { ViewTabs } from '@/features/transactions/components/view-tabs';
 import type { DayGroup } from '@/features/transactions/group-by-day';
 import { isOptimisticId } from '@/features/transactions/mutations';
 import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
@@ -87,6 +88,10 @@ export function MonthView() {
 
   return (
     <Screen>
+      <View style={styles.viewTabs}>
+        <ViewTabs value="month" onChange={(next) => next === 'year' && router.push('/transactions/year')} />
+      </View>
+
       <View style={styles.strip}>
         <MonthStrip months={months} selectedIndex={selectedIndex} onSelect={handleSelectMonth} />
       </View>
@@ -229,6 +234,9 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 const styles = StyleSheet.create({
+  viewTabs: {
+    paddingTop: Spacing.two,
+  },
   strip: {
     paddingVertical: Spacing.two,
   },
