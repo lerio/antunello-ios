@@ -1,5 +1,6 @@
 import { SymbolView } from 'expo-symbols';
-import { useReducer, useState } from 'react';
+import { Stack } from 'expo-router';
+import { useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -98,6 +99,30 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
 
   const currencySymbol = { EUR: '€', USD: '$', JPY: '¥' }[form.currency];
 
+  // The state as it was on opening, captured once. A ref rather than a
+  // comparison against the `state` prop, because the add screen builds that
+  // prop afresh on every render — including a new `Date` — so comparing against
+  // it would report every untouched form as dirty.
+  const initialState = useRef(form);
+
+  /**
+   * Cancels, asking first if anything has been entered.
+   *
+   * The confirmation is only worth showing when there is work to lose; asking
+   * on an untouched form is friction for no reason.
+   */
+  function handleCancel() {
+    if (!hasChanges(form, initialState.current)) {
+      onDone();
+      return;
+    }
+
+    Alert.alert('Discard this transaction?', 'What you have entered will not be saved.', [
+      { text: 'Keep editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: onDone },
+    ]);
+  }
+
   async function handleSave() {
     dispatch({ kind: 'validate' });
     if (!isSubmittable(form)) return;
@@ -157,6 +182,20 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
     // No top inset: this is presented as a modal with a header, and the header
     // already clears the status bar. Insetting again would double the gap.
     <Screen insetTop={false}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              onPress={handleCancel}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel">
+              <ThemedText style={{ color: theme.tint }}>Cancel</ThemedText>
+            </Pressable>
+          ),
+        }}
+      />
+
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -580,6 +619,33 @@ function TransferWarning({
         on the transaction date.
       </ThemedText>
     </View>
+  );
+}
+
+/**
+ * Whether anything has been entered since the form opened.
+ *
+ * Compares only the fields a user can change, ignoring validation errors and the
+ * auto-fill markers — those follow from the fields and would otherwise make an
+ * untouched form look edited.
+ *
+ * @param form The current state.
+ * @param initial The state as it was on opening.
+ */
+function hasChanges(form: FormState, initial: FormState): boolean {
+  return (
+    form.type !== initial.type ||
+    form.isMoneyTransferMode !== initial.isMoneyTransferMode ||
+    form.amount.trim() !== initial.amount.trim() ||
+    form.currency !== initial.currency ||
+    form.title.trim() !== initial.title.trim() ||
+    form.mainCategory !== initial.mainCategory ||
+    form.subCategory !== initial.subCategory ||
+    form.hideFromTotals !== initial.hideFromTotals ||
+    form.splitAcrossYear !== initial.splitAcrossYear ||
+    form.sourceFund?.id !== initial.sourceFund?.id ||
+    form.targetFund?.id !== initial.targetFund?.id ||
+    form.date.getTime() !== initial.date.getTime()
   );
 }
 
