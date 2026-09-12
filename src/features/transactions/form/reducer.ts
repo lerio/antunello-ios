@@ -258,6 +258,11 @@ export function formReducer(state: FormState, action: FormAction): FormState {
     case 'applySuggestion':
       return normalize({
         ...state,
+        // The suggestion's own title replaces what was typed — partial text like
+        // "Tesc" becomes "Tesco". The web app does this in its
+        // `TitleSuggestionInput` rather than in the form's suggestion handler,
+        // which is why it is easy to miss when reading the form alone.
+        title: action.value.title,
         type: action.value.type,
         mainCategory: action.value.main_category,
         subCategory: action.value.sub_category ?? '',

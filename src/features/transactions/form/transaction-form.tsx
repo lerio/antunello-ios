@@ -67,6 +67,14 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
   const theme = useTheme();
   const [form, dispatch] = useReducer(formReducer, state);
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
+  /**
+   * Set after a suggestion is picked, cleared as soon as the title changes.
+   *
+   * Selecting a suggestion leaves the title matching its own text, so the
+   * suggestion would otherwise still match and the list would sit there open
+   * over the form. The web app closes its dropdown on selection the same way.
+   */
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
 
   const { data: funds = [] } = useFunds();
   const { suggestions, shouldShow } = useTitleSuggestions(form.title);
@@ -260,7 +268,10 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <TextInput
             value={form.title}
-            onChangeText={(value) => dispatch({ kind: 'setTitle', value })}
+            onChangeText={(value) => {
+              setSuggestionsDismissed(false);
+              dispatch({ kind: 'setTitle', value });
+            }}
             placeholder="Title"
             placeholderTextColor={theme.textSecondary}
             style={[styles.titleInput, { color: theme.text }]}
@@ -273,7 +284,7 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
           ) : null}
         </View>
 
-        {shouldShow && suggestions.length > 0 ? (
+        {shouldShow && !suggestionsDismissed && suggestions.length > 0 ? (
           <View style={[styles.card, { backgroundColor: theme.card }]}>
             {suggestions.map((suggestion, index) => (
               <View key={suggestion.id}>
@@ -281,7 +292,10 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
                   <View style={[styles.divider, { backgroundColor: theme.separator }]} />
                 ) : null}
                 <Pressable
-                  onPress={() => dispatch({ kind: 'applySuggestion', value: suggestion })}
+                  onPress={() => {
+                    setSuggestionsDismissed(true);
+                    dispatch({ kind: 'applySuggestion', value: suggestion });
+                  }}
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.suggestion,

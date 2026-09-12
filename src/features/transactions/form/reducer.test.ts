@@ -164,6 +164,16 @@ describe('subcategory follows main category', () => {
 });
 
 describe('title suggestions', () => {
+  it('replaces partial text with the suggestion title', () => {
+    const state = apply(
+      initialFormState(),
+      { kind: 'setTitle', value: 'Tesc' },
+      { kind: 'applySuggestion', value: suggestion({ title: 'Tesco' }) },
+    );
+
+    assert.equal(state.title, 'Tesco');
+  });
+
   it('fills type, category and subcategory at once', () => {
     const state = apply(initialFormState(), {
       kind: 'applySuggestion',
@@ -178,6 +188,17 @@ describe('title suggestions', () => {
       mainCategory: true,
       subCategory: true,
     });
+  });
+
+  it('does not mark the title as auto-filled', () => {
+    // The dots mark fields the user did not choose. The title is what they were
+    // typing, even though selecting replaced it.
+    const state = apply(initialFormState(), {
+      kind: 'applySuggestion',
+      value: suggestion(),
+    });
+
+    assert.equal('title' in state.autoFilled, false);
   });
 
   it('drops the auto-filled marker when that field is edited by hand', () => {
