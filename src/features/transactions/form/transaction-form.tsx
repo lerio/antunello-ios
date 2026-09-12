@@ -51,6 +51,27 @@ type TransactionFormProps = {
   onDone: () => void;
   /** The id being edited, absent when creating. */
   transactionId?: string;
+  /**
+   * Saves the transaction somewhere other than the transaction table.
+   *
+   * Reviewing a bank import is not an insert: the row is written, its bonuses
+   * are built and written, and the pending row is closed — and if any of that
+   * fails it is rolled back. The form still owns the fields and the validation
+   * for it, exactly as on the web, where the modal takes the same `onSubmit`
+   * override. Supplying this replaces the built-in add/update entirely.
+   */
+  onSubmit?: (input: TransactionInput) => Promise<void>;
+  /** Label for the submit button; defaults to the add/update wording. */
+  submitLabel?: string;
+  /**
+   * Replaces the Cancel button, and skips the "discard?" confirmation.
+   *
+   * Skipping a bank import is a decision the user is making rather than work
+   * they are abandoning, so asking them to confirm it would be asking twice.
+   */
+  onSkip?: () => void;
+  /** Label for that button; only meaningful alongside `onSkip`. */
+  skipLabel?: string;
 };
 
 /**
@@ -64,7 +85,15 @@ type TransactionFormProps = {
  * A transfer is a mode rather than a type, so the two fund pickers replace the
  * two category pickers in place, using the same error slots. See `reducer.ts`.
  */
-export function TransactionForm({ state, onDone, transactionId }: TransactionFormProps) {
+export function TransactionForm({
+  state,
+  onDone,
+  transactionId,
+  onSubmit,
+  submitLabel,
+  onSkip,
+  skipLabel,
+}: TransactionFormProps) {
   const theme = useTheme();
   const [form, dispatch] = useReducer(formReducer, state);
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
@@ -92,7 +121,11 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
   const updateTransaction = useUpdateTransaction();
   const deleteTransaction = useDeleteTransaction();
 
-  const isSaving = addTransaction.isPending || updateTransaction.isPending;
+  // The external submit is awaited locally rather than read from a mutation,
+  // because the caller's write may be several statements long and none of them
+  // is a mutation this component can see.
+  const [isExternalSaving, setExternalSaving] = useState(false);
+  const isSaving = addTransaction.isPending || updateTransaction.isPending || isExternalSaving;
   const isTransfer = form.isMoneyTransferMode;
   const showErrors = form.hasAttemptedSubmit;
   const errorList = hasValidationErrors(form.errors);
@@ -112,6 +145,13 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
    * on an untouched form is friction for no reason.
    */
   function handleCancel() {
+    // A skip is a decision, not an abandonment — it is the answer to "is this
+    // one of yours?", so it goes straight through.
+    if (onSkip) {
+      onSkip();
+      return;
+    }
+
     if (!hasChanges(form, initialState.current)) {
       onDone();
       return;
@@ -130,7 +170,14 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
     const input = toInput(form);
 
     try {
-      if (transactionId) {
+      if (onSubmit) {
+        setExternalSaving(true);
+        try {
+          await onSubmit(input);
+        } finally {
+          setExternalSaving(false);
+        }
+      } else if (transactionId) {
         await updateTransaction.mutateAsync({ id: transactionId, changes: input });
       } else {
         await addTransaction.mutateAsync(input);
@@ -189,8 +236,8 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
               onPress={handleCancel}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Cancel">
-              <ThemedText style={{ color: theme.tint }}>Cancel</ThemedText>
+              accessibilityLabel={skipLabel ?? 'Cancel'}>
+              <ThemedText style={{ color: theme.tint }}>{skipLabel ?? 'Cancel'}</ThemedText>
             </Pressable>
           ),
         }}
@@ -383,7 +430,7 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
             <ActivityIndicator color="#ffffff" />
           ) : (
             <ThemedText style={styles.saveLabel}>
-              {transactionId ? 'Save changes' : 'Add transaction'}
+              {submitLabel ?? (transactionId ? 'Save changes' : 'Add transaction')}
             </ThemedText>
           )}
         </Pressable>

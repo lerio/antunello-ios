@@ -365,6 +365,48 @@ export function useDeleteTransaction() {
   });
 }
 
+/**
+ * Inserts several transactions at once.
+ *
+ * Only the Trade Republic bonuses use this, and only ever two rows at a time,
+ * but they must go in together: a saveback without its round-up is a half-made
+ * payment, and inserting them one at a time would leave that state visible if
+ * the second failed.
+ *
+ * No optimistic update. These rows are children of a card transaction that was
+ * written moments earlier and is already on screen; showing two synthetic rows
+ * before the database has accepted them would add a flicker to a flow that
+ * completes in a fraction of a second.
+ *
+ * @returns A mutation; call `.mutateAsync(rows)` to run it.
+ */
+export function useAddBonusTransactions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rows: TransactionInput[]): Promise<Transaction[]> => {
+      if (rows.length === 0) return [];
+
+      const [payloads, userId] = await Promise.all([
+        Promise.all(rows.map((row) => withEurConversion(row))),
+        requireUserId(),
+      ]);
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(payloads.map((payload) => ({ ...payload, user_id: userId })))
+        .select();
+
+      if (error) throw error;
+      return (data ?? []) as Transaction[];
+    },
+
+    onSettled: () => {
+      invalidateAfterWrite(queryClient);
+    },
+  });
+}
+
 /** Fetches one transaction, preferring whatever is already cached. */
 async function fetchTransaction(id: string): Promise<Transaction | null> {
   const { data, error } = await supabase

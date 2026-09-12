@@ -91,6 +91,10 @@ function RootNavigator() {
           name="budget/[id]"
           options={{ headerShown: true, presentation: 'modal', title: 'Budget' }}
         />
+        <Stack.Screen
+          name="pending"
+          options={{ headerShown: true, presentation: 'modal', title: 'Review' }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={!session}>
