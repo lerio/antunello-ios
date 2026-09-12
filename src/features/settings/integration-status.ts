@@ -35,6 +35,12 @@ export type IntegrationSettings = {
   /** `session_expired` when the bank needs re-authenticating. */
   auth_status?: string;
   iban?: string;
+  /** The fund this account's transactions are filed under. */
+  fund_category_id?: string | null;
+  /** Trade Republic only: the fund its saveback and round-up credit. */
+  wealth_fund_category_id?: string | null;
+  /** Whether the sync imports the whole history rather than recent activity. */
+  bulk_fetch_enabled?: boolean;
 };
 
 export type BankDefinition = {

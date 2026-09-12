@@ -5,13 +5,15 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import {
+  connectionsFor,
   hasExpiredSession,
-  isBankConnected,
   lastSyncFor,
   SUPPORTED_BANKS,
   type BankDefinition,
   type IntegrationConfig,
 } from '@/features/settings/integration-status';
+import { AccountControls } from '@/features/settings/components/account-controls';
+import { formatSync } from '@/features/settings/relative-time';
 import { useIntegrations } from '@/features/settings/use-integrations';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -87,7 +89,7 @@ export function BankIntegrations() {
   );
 }
 
-/** One bank: its name, its status, and when it last synced. */
+/** One bank: its name, its status, and a control block per connected account. */
 function BankRow({
   bank,
   accounts,
@@ -99,7 +101,8 @@ function BankRow({
 }) {
   const theme = useTheme();
 
-  const connected = isBankConnected(accounts, bank.name);
+  const connections = connectionsFor(accounts, bank.name);
+  const connected = connections.length > 0;
   const expired = hasExpiredSession(accounts, bank.name);
   const lastSync = lastSyncFor(accounts, bank.name);
 
@@ -131,6 +134,16 @@ function BankRow({
           {connected && lastSync ? `Last synced ${formatSync(lastSync)}` : bank.description}
         </ThemedText>
       </View>
+
+      {/* One block per account: a bank can have several, each with its own fund
+          mapping and its own sync. */}
+      {connections.map((config) => (
+        <AccountControls
+          key={config.id}
+          config={config}
+          showAccountId={connections.length > 1}
+        />
+      ))}
     </View>
   );
 }
@@ -158,30 +171,6 @@ function StatusPill({
       ) : null}
     </View>
   );
-}
-
-/**
- * A sync time as a short relative phrase.
- *
- * The web app shows nothing here at all; a timestamp is useful on a phone
- * because it is the only way to tell a working connection from one that stopped
- * syncing weeks ago.
- */
-function formatSync(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return 'recently';
-
-  const minutes = Math.floor((Date.now() - then) / 60_000);
-  if (minutes < 2) return 'just now';
-  if (minutes < 60) return `${minutes} minutes ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 const styles = StyleSheet.create({

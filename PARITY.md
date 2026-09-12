@@ -150,19 +150,6 @@ The web app has both a transaction modal and standalone `/protected/add` and
 `/protected/edit/[id]` pages. This app ships the capability as a single sheet.
 Capability parity is preserved; screen count is not.
 
-### Bank connection
-
-Connecting or re-authenticating a bank opens the deployed web app's settings page
-in an in-app browser (`expo-web-browser`), rather than reimplementing the Enable
-Banking OAuth redirect and the Trade Republic phone/PIN/2FA flow natively. Those
-flows need a PEM private key and a Python service, neither of which can ship in a
-phone app.
-
-**Consequence:** `SFSafariViewController` has its own cookie jar, so the browser
-starts logged out. Signing in to the web app inside that sheet is required before
-the settings page appears. Keychain autofill makes it quick, and it only happens
-when connecting or re-authenticating a bank.
-
 ### Refresh model
 
 The web app polls a `(count, last-updated_at)` fingerprint every 15 seconds and
@@ -255,13 +242,48 @@ refetching after each accept, so the list cannot rearrange under the user
 mid-review. A row the sync adds while they are reviewing appears next time the
 screen opens, which is soon enough for data that arrives on a cron.
 
-### Bank connections are read-only here
+### Bank connections
 
-Connecting, re-authenticating and disconnecting all happen in the browser, which
-"Manage in browser" opens. This is not a shortcut: the Enable Banking flow signs a
-JWT with a private key that must never ship on a device, and Trade Republic's
-needs a phone number, a PIN and an app confirmation. Reimplementing either would
-mean putting secrets on the phone to replace a flow that already works.
+Fund mappings, the bulk-fetch toggle and a sync are all available in the app.
+Connecting, re-authenticating and disconnecting are not — those open the browser.
+That is not a shortcut: the Enable Banking flow signs a JWT with a private key
+that must never ship on a device, and Trade Republic's needs a phone number, a
+PIN and an app confirmation. Reimplementing either would mean putting secrets on
+the phone to replace a flow that already works.
+
+Two different mechanisms sit behind the controls, which is worth knowing when
+reading the code:
+
+  - **Settings are an ordinary RLS-scoped write.** `integration_configs` has an
+    owner-update policy, so a fund mapping is a direct update from the phone. The
+    web app routes it through an API handler only because that is where its
+    settings page happens to live. The merge follows upstream exactly, including
+    that an *absent* key is left alone while a *present but empty* one clears the
+    mapping — otherwise a mapping could never be removed.
+
+  - **A sync is a request to the web app.** It cannot be anything else. The app
+    calls `/api/cron/sync?account_id=…` with the user's own access token.
+
+**This required the first change to the web app.** That route accepted a cron
+secret and a session *cookie*; it now also accepts a Supabase access token in the
+`Authorization` header, verified against the auth server rather than decoded, and
+scoped to the caller's own accounts exactly as the cookie path is. It widens *how*
+a user authenticates, not *whose* data they can reach.
+
+Incidentally it closed a hole: the old check compared the whole header against
+`` `Bearer ${process.env.CRON_SECRET}` ``, and with `CRON_SECRET` unset that
+string is `"Bearer undefined"` — so the literal header `Authorization: Bearer
+undefined` was accepted as a cron job and synced **every account in the table**.
+
+The status list keeps the web app's two matching rules, both in
+`integration-status.ts` with tests: a **Bunq** connection made before the bank's
+name was recorded has none, so it is identified by provider alone; and a **Trade
+Republic** connection is identified by provider because its settings carry no
+name. Get either wrong and a connection the user can see working reads as
+disconnected — which looks like data loss rather than a matching bug.
+
+The screen is also signed out the first time it opens, because
+`SFSafariViewController` has its own cookie jar. Signed in once, it remembers.
 
 The status list is the web app's, including its two matching rules, both in
 `integration-status.ts` with tests: a **Bunq** connection made before the bank's
