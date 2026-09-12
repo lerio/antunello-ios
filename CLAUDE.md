@@ -98,6 +98,46 @@ Native changes, config changes, and dependency changes need a rebuild.
 npm run ios:device              # expo run:ios --device
 ```
 
+### Two builds, and the difference is not cosmetic
+
+`AppDelegate.swift` decides where the JavaScript comes from, on a compile-time
+switch:
+
+```swift
+#if DEBUG
+  …jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")   // fetch from Metro
+#else
+  Bundle.main.url(forResource: "main", withExtension: "jsbundle")   // embedded
+#endif
+```
+
+**Debug** needs Metro reachable at the address in `ip.txt`, so the phone must be
+on the same Wi-Fi as the Mac and the Mac must be awake. It is the development
+build: JS changes reload instantly, the dev menu works, warnings appear as a
+banner.
+
+**Release** embeds the bundle. It needs nothing — no Metro, no cable, no network
+— and is what the app should be for daily use. The cost is that **any JS change
+needs a full rebuild**, so it is not the build to develop against.
+
+Both expire after **seven days** on free provisioning. Reinstalling resets the
+clock, and the session and cached data survive it as long as the app is not
+deleted. They share a bundle id, so installing one replaces the other.
+
+```bash
+cd ios && xcodebuild \
+  -workspace Antunello.xcworkspace -scheme Antunello \
+  -configuration Release \
+  -destination 'id=<xctrace-UDID>' \
+  -allowProvisioningUpdates CODE_SIGN_STYLE=Automatic -jobs 4 \
+  build
+
+xcrun devicectl device install app --device <devicectl-UUID> \
+  ~/Library/Developer/Xcode/DerivedData/Antunello-*/Build/Products/Release-iphoneos/Antunello.app
+```
+
+Note the two different device identifiers, and see trap 4 below for why.
+
 ### The app icon and splash
 
 ```bash
