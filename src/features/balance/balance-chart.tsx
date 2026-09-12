@@ -1,5 +1,6 @@
 import { DashPathEffect, Path as SkiaPath, Circle } from '@shopify/react-native-skia';
 import { useMemo, useState } from 'react';
+import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import {
   CartesianChart,
@@ -56,13 +57,35 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
 
   const hasOverlay = useMemo(() => points.some((p) => p.splitAdjustedBalance !== null), [points]);
 
-  const { state, isActive } = useChartPressState({
+  const { state } = useChartPressState({
     x: 0,
     y: { balance: 0, adjusted: 0 },
   });
 
-  const pressedIndex = isActive ? Math.round(state.x.value.value) : -1;
-  const pressed = pressedIndex >= 0 && pressedIndex < points.length ? points[pressedIndex] : null;
+  /**
+   * Which point the finger is on, mirrored into React state.
+   *
+   * Read through `useAnimatedReaction` rather than directly in the render body.
+   * These are Reanimated shared values living on the UI thread: reading one
+   * during render warns, and more importantly yields a frozen snapshot, so the
+   * tooltip would never follow the finger. The reaction runs on the UI thread
+   * and crosses back with `runOnJS` only when the index actually changes.
+   *
+   * `matchedIndex` is already the index of the pressed point, so no arithmetic
+   * on the x value is needed.
+   */
+  const [pressedIndex, setPressedIndex] = useState<number | null>(null);
+
+  useAnimatedReaction(
+    () => (state.isActive.value ? state.matchedIndex.value : -1),
+    (index, previous) => {
+      if (index === previous) return;
+      runOnJS(setPressedIndex)(index >= 0 ? index : null);
+    },
+  );
+
+  const pressed =
+    pressedIndex !== null && pressedIndex < points.length ? points[pressedIndex] : null;
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card }]}>
@@ -94,27 +117,30 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
         </View>
       </View>
 
-      {pressed ? (
-        <View style={styles.tooltip}>
-          <ThemedText themeColor="textSecondary" style={styles.tooltipDate}>
-            {formatTooltipDate(pressed.date)}
-          </ThemedText>
-          <PrivacyValue style={styles.tooltipValue}>
-            {formatCurrency(pressed.balance, 'EUR')}
-          </PrivacyValue>
-          {pressed.splitAdjustedBalance !== null ? (
-            <PrivacyValue
-              themeColor="textSecondary"
-              style={styles.tooltipSplit}
-              // Built as one string rather than interpolated in JSX, because
-              // `PrivacyValue` takes a single string or number child.
-              children={`⑂ ${formatCurrency(pressed.splitAdjustedBalance, 'EUR')}`}
-            />
-          ) : null}
-        </View>
-      ) : null}
-
       <View style={styles.chart}>
+        {/* Positioned over the chart rather than above it. As a block in the
+            flow it pushed everything down the moment a finger landed, which is
+            the one thing a tooltip must not do. */}
+        {pressed ? (
+          <View style={[styles.tooltip, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText themeColor="textSecondary" style={styles.tooltipDate}>
+              {formatTooltipDate(pressed.date)}
+            </ThemedText>
+            <PrivacyValue style={styles.tooltipValue}>
+              {formatCurrency(pressed.balance, 'EUR')}
+            </PrivacyValue>
+            {pressed.splitAdjustedBalance !== null ? (
+              <PrivacyValue
+                themeColor="textSecondary"
+                style={styles.tooltipSplit}
+                // Built as one string rather than interpolated in JSX, because
+                // `PrivacyValue` takes a single string or number child.
+                children={`⑂ ${formatCurrency(pressed.splitAdjustedBalance, 'EUR')}`}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
         {isLoading && points.length === 0 ? (
           <ActivityIndicator />
         ) : error ? (
@@ -153,7 +179,7 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
                   <DashedSeries points={chartPoints.adjusted} color={theme.textSecondary} />
                 ) : null}
 
-                {isActive ? (
+                {pressedIndex !== null ? (
                   <Circle
                     cx={chartPoints.balance[pressedIndex]?.x ?? 0}
                     cy={chartPoints.balance[pressedIndex]?.y ?? 0}
@@ -264,7 +290,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tooltip: {
-    paddingHorizontal: Spacing.three,
+    // Absolute, so it floats over the plot instead of entering the layout.
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.three,
+    zIndex: 1,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.small,
     gap: 1,
   },
   tooltipDate: {
