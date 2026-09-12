@@ -9,9 +9,9 @@ import {
   View,
 } from 'react-native';
 
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { formatDateHeader } from '@/domain/date';
 import type { Transaction } from '@/domain/types';
@@ -59,7 +59,7 @@ export function MonthView() {
   }, []);
 
   return (
-    <ThemedView style={styles.flex}>
+    <Screen>
       <View style={styles.strip}>
         <MonthStrip months={months} selectedIndex={selectedIndex} onSelect={handleSelectMonth} />
       </View>
@@ -93,7 +93,7 @@ export function MonthView() {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </ThemedView>
+    </Screen>
   );
 }
 
@@ -179,7 +179,6 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   strip: {
     paddingVertical: Spacing.two,
   },

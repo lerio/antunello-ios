@@ -9,8 +9,8 @@ import {
   View,
 } from 'react-native';
 
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
@@ -38,7 +38,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ThemedView style={styles.flex}>
+    <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
           ACCOUNT
@@ -124,7 +124,7 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
       </ScrollView>
-    </ThemedView>
+    </Screen>
   );
 }
 
