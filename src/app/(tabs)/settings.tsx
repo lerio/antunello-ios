@@ -15,6 +15,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
+import { BankIntegrations } from '@/features/settings/components/bank-integrations';
 import { fetchMonthTransactions } from '@/features/transactions/queries';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -22,8 +23,7 @@ import { supabase } from '@/lib/supabase';
 /**
  * Settings.
  *
- * Account, privacy mode and a connectivity check. Bank integration status and
- * the in-app-browser bank connection arrive in Phase 4.
+ * Bank connections, account, privacy mode and a connectivity check.
  */
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -41,6 +41,12 @@ export default function SettingsScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
+          BANKS
+        </ThemedText>
+
+        <BankIntegrations />
+
+        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
           ACCOUNT
         </ThemedText>
 

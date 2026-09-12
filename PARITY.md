@@ -243,6 +243,36 @@ With no defined row order the sample differs between loads, so the web app does 
 reliably agree with itself, let alone with this one. This app reads the whole
 column instead — a superset of any sample.
 
+### Pending bank rows get a tab badge, not a floating bell
+
+The web app floats a bell over the transaction list with the count on it. A
+badge on the Transactions tab does the same job and is where iOS puts a count: it
+is visible from every tab rather than only the one it floats over, and it does
+not cover a transaction — which on a phone is what "over the list" means.
+
+The review screen reads the queue once and walks it with an index rather than
+refetching after each accept, so the list cannot rearrange under the user
+mid-review. A row the sync adds while they are reviewing appears next time the
+screen opens, which is soon enough for data that arrives on a cron.
+
+### Bank connections are read-only here
+
+Connecting, re-authenticating and disconnecting all happen in the browser, which
+"Manage in browser" opens. This is not a shortcut: the Enable Banking flow signs a
+JWT with a private key that must never ship on a device, and Trade Republic's
+needs a phone number, a PIN and an app confirmation. Reimplementing either would
+mean putting secrets on the phone to replace a flow that already works.
+
+The status list is the web app's, including its two matching rules, both in
+`integration-status.ts` with tests: a **Bunq** connection made before the bank's
+name was recorded has none, so it is identified by provider alone; and a **Trade
+Republic** connection is identified by provider because its settings carry no
+name. Get either wrong and a connection the user can see working reads as
+disconnected — which looks like data loss rather than a matching bug.
+
+The screen is also signed out the first time it opens, because
+`SFSafariViewController` has its own cookie jar. Signed in once, it remembers.
+
 ### A budget's threshold uses the rounded percentage
 
 The web app rounds spending to a whole percentage *before* comparing it against
