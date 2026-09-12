@@ -55,7 +55,8 @@
     "test": "tsx --test \"src/**/*.test.ts\"",
     "vendor": "node scripts/vendor-domain.mjs",
     "vendor:check": "node scripts/vendor-domain.mjs --check",
-    "parity": "node scripts/parity-check.mjs"
+    "parity": "node scripts/parity-check.mjs",
+    "icon": "node scripts/make-icon.mjs"
   },
   "private": true
 }

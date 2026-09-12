@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { hapticSelect } from '@/lib/haptics';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ChipOption = {
@@ -34,7 +35,10 @@ export function ChipRow({ options, selected, onToggle, accessibilityLabel }: Chi
         return (
           <Pressable
             key={option.value}
-            onPress={() => onToggle(option.value)}
+            onPress={() => {
+              hapticSelect();
+              onToggle(option.value);
+            }}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={option.label}

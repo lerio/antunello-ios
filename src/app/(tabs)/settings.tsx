@@ -1,13 +1,4 @@
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -16,9 +7,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { BankIntegrations } from '@/features/settings/components/bank-integrations';
-import { fetchMonthTransactions } from '@/features/transactions/queries';
 import { useTheme } from '@/hooks/use-theme';
-import { supabase } from '@/lib/supabase';
 
 /**
  * Settings.
@@ -115,12 +104,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
-          DIAGNOSTICS
-        </ThemedText>
-
-        <DataAccessCheck />
-
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
             Supabase project
@@ -131,94 +114,6 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </Screen>
-  );
-}
-
-/**
- * Diagnostics for the data layer.
- *
- * Two things this proves that are otherwise awkward to check:
- *
- *  - **Row-level security resolves the signed-in user.** A known Supabase issue
- *    on React Native has `signInWithPassword` succeed while `auth.uid()`
- *    evaluates to null for later queries, so every RLS-scoped read returns
- *    nothing and the app looks signed in but empty.
- *  - **The month fetcher works end to end** — query, split expansion, sort.
- *    A wrong split expansion would otherwise only show up as a puzzling number
- *    in the month view.
- *
- * Delete once real screens make both obvious on their own.
- */
-function DataAccessCheck() {
-  const theme = useTheme();
-  const [state, setState] = useState<
-    | { status: 'loading' }
-    | { status: 'error'; message: string }
-    | { status: 'ok'; total: number; month: number; monthLabel: string; splits: number }
-  >({ status: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      const now = new Date();
-
-      const [countResult, monthRows] = await Promise.all([
-        supabase.from('transactions').select('id', { count: 'exact', head: true }),
-        fetchMonthTransactions(now.getFullYear(), now.getMonth() + 1),
-      ]);
-
-      if (cancelled) return;
-
-      if (countResult.error) {
-        setState({
-          status: 'error',
-          message: `${countResult.error.code ?? ''} ${countResult.error.message}`.trim(),
-        });
-        return;
-      }
-
-      setState({
-        status: 'ok',
-        total: countResult.count ?? 0,
-        month: monthRows.length,
-        monthLabel: now.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
-        splits: monthRows.filter((t) => t.split_across_year).length,
-      });
-    }
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return (
-    <View style={[styles.card, { backgroundColor: theme.card }]}>
-      <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
-        Data access
-      </ThemedText>
-
-      {state.status === 'loading' ? <ActivityIndicator /> : null}
-
-      {state.status === 'error' ? (
-        <ThemedText themeColor="destructive" style={styles.mono}>
-          {state.message}
-        </ThemedText>
-      ) : null}
-
-      {state.status === 'ok' ? (
-        <>
-          <ThemedText style={styles.mono}>
-            {state.total.toLocaleString('en-US')} rows visible in total
-          </ThemedText>
-          <ThemedText style={styles.mono}>
-            {state.month.toLocaleString('en-US')} this month ({state.monthLabel}),{' '}
-            {state.splits} split
-          </ThemedText>
-        </>
-      ) : null}
-    </View>
   );
 }
 

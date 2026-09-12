@@ -14,6 +14,7 @@ import {
 } from '@/features/transactions/form/transaction-form';
 import type { TransactionInput } from '@/features/transactions/mutations';
 import { messageOf } from '@/lib/errors';
+import { hapticError, hapticSelect, hapticSuccess } from '@/lib/haptics';
 
 /**
  * Reviewing bank imports, one at a time.
@@ -58,8 +59,14 @@ export function PendingReview() {
     if (!current) return;
 
     dismiss.mutate(current.id, {
-      onSuccess: advance,
-      onError: (skipError) => Alert.alert('Could not skip', messageOf(skipError)),
+      onSuccess: () => {
+        hapticSelect();
+        advance();
+      },
+      onError: (skipError) => {
+        hapticError();
+        Alert.alert('Could not skip', messageOf(skipError));
+      },
     });
   }, [advance, current, dismiss]);
 
@@ -68,6 +75,7 @@ export function PendingReview() {
       if (!current) return;
 
       const { warnings } = await accept.mutateAsync({ pending: current, input, funds });
+      hapticSuccess();
 
       // A skipped bonus is not a failure — the transaction was saved — so it is
       // reported rather than thrown, and the review carries on.

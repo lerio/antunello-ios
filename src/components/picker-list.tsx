@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { hapticSelect } from '@/lib/haptics';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PickerOption = {
@@ -110,6 +111,8 @@ export function PickerList(props: PickerListProps) {
 
               <Pressable
                 onPress={() => {
+                  if (item.disabled) return;
+                  hapticSelect();
                   if (isMulti) props.onToggle?.(item.value);
                   else props.onSelect?.(item.value);
                 }}

@@ -18,6 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { hasValidationErrors } from '@/domain/form-validation';
 import { messageOf } from '@/lib/errors';
+import { hapticError, hapticSuccess } from '@/lib/haptics';
 import {
   CATEGORIES_WITH_TYPES,
   SUB_CATEGORIES,
@@ -182,11 +183,13 @@ export function TransactionForm({
       } else {
         await addTransaction.mutateAsync(input);
       }
+      hapticSuccess();
       onDone();
     } catch (error) {
       // Logged as well as alerted: the alert can only show a string, and the
       // original carries fields an alert cannot.
       console.error('Transaction save failed:', error);
+      hapticError();
       Alert.alert('Could not save', messageOf(error));
     }
   }
@@ -202,8 +205,14 @@ export function TransactionForm({
         onPress: () => {
           deleteTransaction
             .mutateAsync(transactionId)
-            .then(onDone)
-            .catch((error) => Alert.alert('Could not delete', messageOf(error)));
+            .then(() => {
+              hapticSuccess();
+              onDone();
+            })
+            .catch((error) => {
+              hapticError();
+              Alert.alert('Could not delete', messageOf(error));
+            });
         },
       },
     ]);
