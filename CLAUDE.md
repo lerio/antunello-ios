@@ -132,6 +132,19 @@ xcrun devicectl list devices      # a different id: <devicectl-uuid>-…
 
 Passing the devicectl UUID yields `No device UDID or name matching`.
 
+**5. Limit build parallelism on a memory-constrained machine.** `xcodebuild`
+spawns one compiler per core, and on a 24 GB machine the peak is enough to push
+macOS into heavy swap and start killing other processes — Metro in particular,
+which then has to be restarted.
+
+```bash
+xcodebuild … -jobs 4 build        # cap concurrent compiler jobs
+```
+
+Worth doing whenever Metro is expected to stay up during a build. Xcode left
+open in the background adds to the pressure and is worth quitting between
+sessions.
+
 **5. The `xcode` npm package's `writeSync()` does not persist in this setup.**
 Both a config plugin and a standalone patch script reported success while
 changing nothing. Do not rely on programmatic edits to `project.pbxproj` — verify
