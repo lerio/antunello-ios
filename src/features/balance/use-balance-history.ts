@@ -119,24 +119,44 @@ export function useBalanceHistory(timeRange: TimeRange, anchor: number) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const points = useMemo<AnchoredDataPoint[]>(() => {
-    if (!query.data) return [];
+  /**
+   * Whether the data on hand actually belongs to the selected range.
+   *
+   * The query client is configured with `keepPreviousData` globally, which is
+   * right for lists that swap in place — but wrong here. Switching range changes
+   * the query key while the previous range's rows are still handed over, so the
+   * series builder would be asked to draw a five-year grid from thirty days of
+   * transactions: a plausible-looking line that is simply incorrect, corrected
+   * only when the real rows arrive.
+   *
+   * `isPlaceholderData` identifies exactly that window, so the chart shows a
+   * spinner instead of a wrong line. A spinner is honest; a wrong line is not.
+   */
+  const hasOwnData = Boolean(query.data) && !query.isPlaceholderData;
 
+  const points = useMemo<AnchoredDataPoint[]>(() => {
+    if (!hasOwnData) return [];
+
+    const data = query.data!;
     const windows = getComparisonWindows30();
     const windowStart =
-      timeRange === '1m' ? windows.current.start : (startForRange(timeRange) ?? earliest(query.data));
+      timeRange === '1m' ? windows.current.start : (startForRange(timeRange) ?? earliest(data));
     if (!windowStart) return [];
 
     return buildAnchoredSeries(
-      query.data,
+      data,
       windowStart,
       new Date().toISOString().split('T')[0],
       anchor,
       timeRange,
     );
-  }, [query.data, timeRange, anchor]);
+  }, [hasOwnData, query.data, timeRange, anchor]);
 
-  return { points, isLoading: query.isLoading, error: query.error };
+  return {
+    points,
+    isLoading: query.isLoading || !hasOwnData,
+    error: query.error,
+  };
 }
 
 /** The earliest transaction date, for the "all" range which has no start. */
