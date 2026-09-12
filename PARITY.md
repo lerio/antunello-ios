@@ -203,3 +203,51 @@ Feature parity, not pixel parity. The anchored balance chart keeps its defining
 property — the last point equals the Balance card total by construction — and the
 dotted split-adjusted overlay. Grid lines, exact tick placement and animation
 timing differ.
+
+### The filter's 500-row cap is kept, but reported
+
+`useFilteredTransactions` caps its query at 500 rows and computes the summary from
+whatever came back. This app keeps the cap — the same filter returning different
+numbers on the two platforms would be worse than either number being wrong,
+because nothing would say which one to trust.
+
+What is *not* reproduced is the silence. When the cap is hit, the results screen
+says so, under the summary card. Without that the balance would present a
+truncated set as the whole picture.
+
+Two related differences:
+
+- **Year-only filters no longer double-count split sources.** Upstream builds its
+  expansion input as `[...results, ...allSplitSources]`, and `results` for a
+  year already contains that year's split sources — so each is expanded twice,
+  producing a duplicated row and a doubled total. This app deduplicates by id
+  before expanding. The two agree whenever upstream does not duplicate, and this
+  one is right when it does. **This is the only place the port knowingly returns
+  a different result from the web app**, and it is a correction, not a
+  convention.
+- **Split sources are capped at 10,000 rather than 500 per year**, matching the
+  month and year views. The limit is not reachable with any realistic number of
+  splits.
+
+### The filter's amount range is two fields, not a slider
+
+The web app's dual-thumb slider is bounded at 10,000 in steps of 100, so it cannot
+express "over 12,000" or "under 5". Two numeric fields are exact, quicker than
+dragging on a phone, and accept every value the slider does — a superset rather
+than a divergence.
+
+### The filter's currency list is complete, not sampled
+
+Upstream reads 1,000 rows with no `order by` and collects the currencies it finds.
+With no defined row order the sample differs between loads, so the web app does not
+reliably agree with itself, let alone with this one. This app reads the whole
+column instead — a superset of any sample.
+
+### The transaction list's search field is not editable
+
+Tapping it pushes the search screen, where the field focuses. An editable field on
+the list itself would either search in place — competing with the month strip for
+what the list is showing — or look editable and then navigate, which is worse. The
+back gesture replaces the web app's `from_year`/`from_month` query parameters:
+search is pushed onto the period it was opened from, so popping returns there by
+construction.

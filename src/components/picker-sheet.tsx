@@ -1,50 +1,36 @@
-import { SymbolView } from 'expo-symbols';
-import { useMemo, useState } from 'react';
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  isMultiSelection,
+  PickerList,
+  type PickerOption,
+  type PickerListProps,
+} from '@/components/picker-list';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export type PickerOption = {
-  value: string;
-  label: string;
-  /** Secondary text, e.g. a fund's currency or a subcategory's parent. */
-  detail?: string;
-  /** Section heading; consecutive options sharing one are grouped. */
-  group?: string;
-  /** Renders greyed out and cannot be chosen. */
-  disabled?: boolean;
-};
+export type { PickerOption };
 
-type PickerSheetProps = {
+type PickerSheetProps = Pick<PickerListProps, 'options' | 'selected' | 'onSelect' | 'onToggle' | 'searchable'> & {
   visible: boolean;
   title: string;
-  options: PickerOption[];
-  selected: string | null;
-  onSelect: (value: string) => void;
   onClose: () => void;
-  /** Shows a filter box. Worth it above roughly a dozen options. */
-  searchable?: boolean;
 };
 
 /**
- * A bottom sheet for choosing one option from a list.
+ * A bottom sheet for choosing options from a list.
  *
  * Hand-rolled on React Native's `Modal` rather than pulling in a sheet library:
  * the behaviour needed here is small and well understood, and avoiding the
  * dependency keeps the native build lean.
  *
- * Options carrying the same `group` are rendered under one heading, which is how
- * the fund picker shows its top-level categories without a second component.
+ * The list itself lives in `PickerList`, so the filter controls can show the
+ * same thing inside their own sheet without nesting one modal in another.
+ *
+ * A single choice closes the sheet, since the tap is the answer; a multi-select
+ * stays open until Done, since the user is still assembling a set.
  */
 export function PickerSheet({
   visible,
@@ -52,36 +38,22 @@ export function PickerSheet({
   options,
   selected,
   onSelect,
+  onToggle,
   onClose,
   searchable = false,
 }: PickerSheetProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => {
-    if (!searchable || !query.trim()) return options;
-    const needle = query.trim().toLowerCase();
-    return options.filter(
-      (option) =>
-        option.label.toLowerCase().includes(needle) ||
-        option.detail?.toLowerCase().includes(needle),
-    );
-  }, [options, query, searchable]);
-
-  function handleClose() {
-    setQuery('');
-    onClose();
-  }
+  const isMulti = isMultiSelection(selected);
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
       statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Close" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
 
       <View
         style={[
@@ -92,78 +64,28 @@ export function PickerSheet({
 
         <View style={styles.header}>
           <ThemedText style={styles.title}>{title}</ThemedText>
-          <Pressable onPress={handleClose} hitSlop={8} accessibilityRole="button">
+          <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
             <ThemedText style={{ color: theme.tint }}>Done</ThemedText>
           </Pressable>
         </View>
 
-        {searchable ? (
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={[styles.search, { backgroundColor: theme.backgroundElement, color: theme.text }]}
-          />
-        ) : null}
-
-        <FlatList
-          data={filtered}
-          keyExtractor={(option) => option.value}
-          keyboardShouldPersistTaps="handled"
-          style={styles.list}
-          renderItem={({ item, index }) => {
-            const isSelected = item.value === selected;
-            // Show the heading only on the first option of each group.
-            const showGroup =
-              item.group !== undefined && item.group !== filtered[index - 1]?.group;
-
-            return (
-              <>
-                {showGroup ? (
-                  <ThemedText themeColor="textSecondary" style={styles.groupHeading}>
-                    {item.group}
-                  </ThemedText>
-                ) : null}
-
-                <Pressable
-                  onPress={() => {
-                    handleClose();
-                    onSelect(item.value);
-                  }}
-                  disabled={item.disabled}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected, disabled: item.disabled }}
-                  style={({ pressed }) => [
-                    styles.row,
-                    {
-                      backgroundColor: pressed ? theme.backgroundElement : 'transparent',
-                      opacity: item.disabled ? 0.35 : 1,
-                    },
-                  ]}>
-                  <View style={styles.rowText}>
-                    <ThemedText numberOfLines={1}>{item.label}</ThemedText>
-                    {item.detail ? (
-                      <ThemedText themeColor="textSecondary" style={styles.detail} numberOfLines={1}>
-                        {item.detail}
-                      </ThemedText>
-                    ) : null}
-                  </View>
-
-                  {isSelected ? (
-                    <SymbolView name="checkmark" size={15} tintColor={theme.tint} />
-                  ) : null}
-                </Pressable>
-              </>
-            );
-          }}
-          ListEmptyComponent={
-            <ThemedText themeColor="textSecondary" style={styles.empty}>
-              Nothing matches “{query}”
-            </ThemedText>
+        <PickerList
+          // Remounts on each open, so the search box does not keep the last query.
+          key={visible ? 'open' : 'closed'}
+          options={options}
+          searchable={searchable}
+          selected={selected}
+          // A single choice is the answer, so the sheet closes on the tap. A
+          // multi-select is still being assembled, so it stays open until Done.
+          onSelect={
+            isMulti
+              ? undefined
+              : (value: string) => {
+                  onClose();
+                  onSelect?.(value);
+                }
           }
+          onToggle={isMulti ? onToggle : undefined}
         />
       </View>
     </Modal>
@@ -206,43 +128,5 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '600',
-  },
-  search: {
-    marginHorizontal: Spacing.three,
-    marginBottom: Spacing.two,
-    height: 40,
-    borderRadius: Radius.medium,
-    paddingHorizontal: Spacing.three,
-    fontSize: 16,
-  },
-  list: {
-    flexGrow: 0,
-  },
-  groupHeading: {
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.one,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-    minHeight: 44,
-  },
-  rowText: {
-    flex: 1,
-    gap: 1,
-  },
-  detail: {
-    fontSize: 12,
-  },
-  empty: {
-    textAlign: 'center',
-    paddingVertical: Spacing.four,
   },
 });

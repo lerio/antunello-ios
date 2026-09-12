@@ -7,8 +7,8 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
-import { SearchField } from '@/features/search/components/search-field';
 import { DayHeader } from '@/features/transactions/components/day-header';
+import { ListToolbar } from '@/features/transactions/components/list-toolbar';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import { ViewTabs } from '@/features/transactions/components/view-tabs';
@@ -99,8 +99,8 @@ export function MonthView() {
 
   return (
     <Screen>
-      <View style={styles.searchRow}>
-        <SearchField onPress={() => router.push('/transactions/search')} />
+      <View style={styles.toolbar}>
+        <ListToolbar />
       </View>
 
       <View style={styles.viewTabs}>
@@ -173,7 +173,7 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 const styles = StyleSheet.create({
-  searchRow: {
+  toolbar: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,
   },
