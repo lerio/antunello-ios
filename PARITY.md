@@ -243,6 +243,24 @@ With no defined row order the sample differs between loads, so the web app does 
 reliably agree with itself, let alone with this one. This app reads the whole
 column instead — a superset of any sample.
 
+### A budget's threshold uses the rounded percentage
+
+The web app rounds spending to a whole percentage *before* comparing it against
+the colour thresholds, so 90.1% of the limit is still "normal" (it rounds to 90)
+and a budget only turns red once the rounded figure reaches 101 — meaning one
+past its limit still reads as a warning. `isOverBudget` is the honest figure and
+does not follow the percentage; it is what the card's "Over"/"Remaining" line
+keys off.
+
+Reproduced exactly, because the alternative — comparing the raw ratio — looks
+just as reasonable and would disagree at the margins, which is the hardest kind
+of difference to notice. Pinned down in `budget-progress.test.ts`.
+
+The whole card opens the edit sheet rather than showing the web app's corner
+pencil: a 20-point icon is not a comfortable target, and a card has nothing else
+to be tapped for. Budgets also has no floating add-transaction button, matching
+the web page — its own "Add budget" button is the one affordance there.
+
 ### The transaction list's search field is not editable
 
 Tapping it pushes the search screen, where the field focuses. An editable field on

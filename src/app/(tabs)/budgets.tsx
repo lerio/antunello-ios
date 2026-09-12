@@ -1,10 +1,6 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { BudgetsView } from '@/features/budgets/budgets-view';
 
+/** This month's budgets, with how much of each is gone. */
 export default function BudgetsScreen() {
-  return (
-    <PlaceholderScreen
-      title="Budgets"
-      detail="Category budgets with progress bars and thresholds — Phase 3."
-    />
-  );
+  return <BudgetsView />;
 }

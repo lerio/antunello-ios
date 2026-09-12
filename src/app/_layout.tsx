@@ -83,6 +83,14 @@ function RootNavigator() {
           name="transaction/[id]"
           options={{ headerShown: true, presentation: 'modal', title: 'Transaction' }}
         />
+        <Stack.Screen
+          name="budget/new"
+          options={{ headerShown: true, presentation: 'modal', title: 'New Budget' }}
+        />
+        <Stack.Screen
+          name="budget/[id]"
+          options={{ headerShown: true, presentation: 'modal', title: 'Budget' }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={!session}>

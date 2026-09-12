@@ -7,13 +7,14 @@ import { useMemo } from 'react';
 
 import { groupTransactionsByDay, type DayGroup } from '@/features/transactions/group-by-day';
 import { fetchMonthTransactions } from '@/features/transactions/queries';
+import type { Transaction } from '@/domain/types';
 import { qk } from '@/lib/query-keys';
 
 type MonthTransactions = {
   /** One entry per day, newest first, with totals already computed. */
   days: DayGroup[];
-  /** Every transaction in the month, ungrouped. */
-  transactions: NonNullable<ReturnType<typeof useQuery>['data']> | never[];
+  /** Every transaction in the month, ungrouped, with split instances expanded. */
+  transactions: Transaction[];
   isLoading: boolean;
   isError: boolean;
   error: unknown;
