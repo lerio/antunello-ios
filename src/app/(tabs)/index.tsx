@@ -1,10 +1,28 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { ScrollView, StyleSheet } from 'react-native';
 
+import { Screen } from '@/components/screen';
+import { Spacing } from '@/constants/theme';
+import { BalanceCard } from '@/features/funds/balance-card';
+
+/**
+ * Home.
+ *
+ * Currently the Balance card only. The anchored balance chart and the 30-day
+ * comparison tables land next.
+ */
 export default function HomeScreen() {
   return (
-    <PlaceholderScreen
-      title="Home"
-      detail="Balance card, anchored balance chart and the 30-day comparison — Phase 2."
-    />
+    <Screen>
+      <ScrollView contentContainerStyle={styles.content}>
+        <BalanceCard />
+      </ScrollView>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
+});

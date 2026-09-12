@@ -59,8 +59,23 @@ export const qk = {
   /** A single transaction by id. */
   one: (id: string) => [TX, 'one', id] as const,
 
-  /** Fund accounts with their computed balances. */
+  /**
+   * The fund account list, for pickers.
+   *
+   * Only changes when a fund is added, renamed or deactivated — not when a
+   * transaction is written.
+   */
   funds: () => ['funds'] as const,
+
+  /**
+   * Fund accounts with their balances, for the Balance card.
+   *
+   * Separate from `funds` because the cost differs sharply: this one calls an
+   * RPC and converts every non-EUR fund over the network, so it must not be
+   * refetched merely to populate a picker. It *is* invalidated by every
+   * transaction write, since a write changes a balance.
+   */
+  fundBalances: () => ['fund-balances'] as const,
 
   /** Budget targets with spending progress. */
   budgets: () => ['budgets'] as const,
@@ -97,6 +112,7 @@ export const qk = {
 export const PERSISTED_ROOTS: readonly string[] = [
   TX,
   'funds',
+  'fund-balances',
   'budgets',
   'first-transaction-date',
 ];

@@ -153,7 +153,10 @@ export function invalidateAfterWrite(
     [TX, 'year'],
     [TX, 'range'],
     [TX, 'anchored'],
-    qk.funds(),
+    // Balances, not the fund list: a transaction moves money within a fund
+    // rather than changing which funds exist, so refetching the cheap list
+    // would be pointless while missing the thing that actually changed.
+    qk.fundBalances(),
   ];
 
   for (const queryKey of families) {
