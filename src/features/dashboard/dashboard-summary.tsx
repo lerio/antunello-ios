@@ -1,7 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -46,9 +47,20 @@ export function DashboardSummary() {
   }
 
   if (isLoading) {
+    // Shaped like the table that is coming — label, three columns, four rows —
+    // so the card does not resize when the figures land.
     return (
       <Card title="Last 30 days">
-        <ActivityIndicator style={styles.message} />
+        <View style={styles.skeletonRows}>
+          {Array.from({ length: 5 }, (_, index) => (
+            <View key={index} style={styles.skeletonRow}>
+              <Skeleton width={index === 0 ? 64 : 96} height={index === 0 ? 11 : 14} />
+              <Skeleton width={62} height={index === 0 ? 11 : 14} />
+              <Skeleton width={62} height={index === 0 ? 11 : 14} />
+              <Skeleton width={62} height={index === 0 ? 11 : 14} />
+            </View>
+          ))}
+        </View>
       </Card>
     );
   }
@@ -382,6 +394,15 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 const styles = StyleSheet.create({
+  skeletonRows: {
+    gap: Spacing.two + Spacing.half,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
   card: {
     borderRadius: Radius.medium,
     paddingVertical: Spacing.three,

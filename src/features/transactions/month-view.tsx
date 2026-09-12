@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
+import { RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 
 import { AddTransactionButton } from '@/components/add-transaction-button';
 import { Screen } from '@/components/screen';
+import { SkeletonRows } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
@@ -112,9 +113,7 @@ export function MonthView() {
       </View>
 
       {isLoading && days.length === 0 ? (
-        <View style={styles.centered}>
-          <ActivityIndicator />
-        </View>
+        <SkeletonRows count={8} />
       ) : (
         <SectionList
           sections={sections}
