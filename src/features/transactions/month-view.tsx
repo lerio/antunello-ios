@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -68,6 +68,23 @@ export function MonthView() {
     [router],
   );
 
+  // Stable identities, so a re-render of this screen does not make the list
+  // treat every row as changed. Passing a fresh closure each render was causing
+  // the whole month to re-render, which on a long month is visible as a stall.
+  const renderItem = useCallback(
+    ({ item }: { item: Transaction }) => (
+      <TransactionRow transaction={item} onPress={handlePressTransaction} />
+    ),
+    [handlePressTransaction],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: DayGroup }) => <DayHeader day={section} />,
+    [],
+  );
+
+  const keyExtractor = useCallback((item: Transaction) => item.id, []);
+
   return (
     <Screen>
       <View style={styles.strip}>
@@ -81,11 +98,9 @@ export function MonthView() {
       ) : (
         <SectionList
           sections={sections}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TransactionRow transaction={item} onPress={handlePressTransaction} />
-          )}
-          renderSectionHeader={({ section }) => <DayHeader day={section} />}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
           // On iOS this defaults to true, which is what pins the day headers
           // while their transactions scroll past.
           stickySectionHeadersEnabled
@@ -156,7 +171,7 @@ function usePeriodParams() {
  * where only income is hidden. A day total is an aggregate, so leaving it
  * readable would leak the sum of the very values being hidden.
  */
-function DayHeader({ day }: { day: DayGroup }) {
+const DayHeader = memo(function DayHeader({ day }: { day: DayGroup }) {
   const theme = useTheme();
   const isPositive = day.dailyTotal >= 0;
 
@@ -200,7 +215,7 @@ function DayHeader({ day }: { day: DayGroup }) {
       </View>
     </View>
   );
-}
+});
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
