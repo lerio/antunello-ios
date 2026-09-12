@@ -98,6 +98,17 @@ Native changes, config changes, and dependency changes need a rebuild.
 npm run ios:device              # expo run:ios --device
 ```
 
+### The app icon and splash
+
+```bash
+npm run icon                    # redraw assets/images/*.png and the .icon bundle
+```
+
+Draws the icon with no dependencies — see `scripts/make-icon.mjs` for why. The
+geometry lives in that file, so change it there and re-run rather than editing
+the PNGs. **An icon change needs a rebuild** (`npm run ios:device`) before it
+shows on the phone; nothing at runtime reads it.
+
 ### Running the tests and checks
 
 ```bash
