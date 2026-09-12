@@ -68,13 +68,21 @@ export function TransactionForm({ state, onDone, transactionId }: TransactionFor
   const [form, dispatch] = useReducer(formReducer, state);
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
   /**
-   * Set after a suggestion is picked, cleared as soon as the title changes.
+   * Whether the suggestion list is hidden, cleared as soon as the title changes.
    *
-   * Selecting a suggestion leaves the title matching its own text, so the
-   * suggestion would otherwise still match and the list would sit there open
-   * over the form. The web app closes its dropdown on selection the same way.
+   * Set in two situations:
+   *
+   *  - **On opening.** A prefilled title — every edit, and any pending
+   *    transaction being reviewed — is already long enough to match, so the list
+   *    would be open before the user has done anything. The web app's dropdown
+   *    starts closed and opens only on input, which is the behaviour this
+   *    reproduces.
+   *  - **After picking.** The chosen suggestion still matches its own text, so
+   *    the list would immediately reopen over the form.
    */
-  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(
+    state.title.trim().length > 0,
+  );
 
   const { data: funds = [] } = useFunds();
   const { suggestions, shouldShow } = useTitleSuggestions(form.title);
