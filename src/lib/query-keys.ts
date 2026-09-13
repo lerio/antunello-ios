@@ -47,15 +47,6 @@ export const qk = {
   /** The anchored balance series for a chart time range. */
   anchored: (range: TimeRange) => [TX, 'anchored', range] as const,
 
-  /**
-   * Split-across-year *source* rows for a year.
-   *
-   * Split windows roll forward from each source's own month, so sources are
-   * fetched for a year and its predecessor — a source from November can still
-   * be contributing the following October.
-   */
-  split: (year: number) => [TX, 'split', year] as const,
-
   /** A single transaction by id. */
   one: (id: string) => [TX, 'one', id] as const,
 

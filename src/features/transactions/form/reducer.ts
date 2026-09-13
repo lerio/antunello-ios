@@ -38,6 +38,16 @@ import { getCategoryType, type TitleSuggestion } from '@/domain/types';
 /** The category that represents a movement between the user's own funds. */
 export const MONEY_TRANSFER_CATEGORY = 'Money Transfer';
 
+/**
+ * The name shown for a fund whose real name could not be looked up.
+ *
+ * A stored fund id is data; its name is presentation. When the fund list cannot
+ * supply the name — deactivated fund, list not loaded, or a failed fetch — the
+ * id is still kept, and this stands in for the label rather than letting the
+ * transaction lose its fund. See `resolveFund` in `from-transaction.ts`.
+ */
+export const UNRESOLVED_FUND_NAME = 'Unavailable fund';
+
 /** The currencies a transaction may be denominated in, matching the web app. */
 export const TRANSACTION_CURRENCIES = ['EUR', 'USD', 'JPY'] as const;
 export type TransactionCurrency = (typeof TRANSACTION_CURRENCIES)[number];

@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { FundCategory } from '@/domain/types';
+import { UNRESOLVED_FUND_NAME } from '@/features/transactions/form/reducer';
 import { formStateFromPending, hasTrBonuses } from '@/features/pending/from-pending';
 import type { PendingTransaction } from '@/features/pending/types';
 
@@ -106,11 +107,22 @@ describe('the review form state', () => {
     assert.deepEqual(state.sourceFund, { id: 'f1', name: 'Trade Republic' });
   });
 
-  it('leaves the fund empty when it is not in the list', () => {
-    // A deactivated fund is absent from the picker, so the id cannot be shown.
+  it('keeps the id when the fund is not in the list, with a stand-in name', () => {
+    // The bank's mapping is the only reason this row is attributed to a fund, so
+    // losing it here would discard what the sync recorded — and the review
+    // screen has no fund control to put it back. The name is presentation; the
+    // id is data.
     const state = formStateFromPending(pending({ fund_category_id: 'gone' }), [fund()]);
 
-    assert.equal(state.sourceFund, null);
+    assert.deepEqual(state.sourceFund, { id: 'gone', name: UNRESOLVED_FUND_NAME });
+  });
+
+  it('keeps the id even when the fund list is empty', () => {
+    // The list is empty on a cold start, and after a failed fetch — which the
+    // screen cannot tell apart from "this user has no funds".
+    const state = formStateFromPending(pending({ fund_category_id: 'f1' }), []);
+
+    assert.deepEqual(state.sourceFund, { id: 'f1', name: UNRESOLVED_FUND_NAME });
   });
 
   it('leaves the fund empty when there is none', () => {

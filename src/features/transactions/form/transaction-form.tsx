@@ -40,6 +40,7 @@ import {
   type FormState,
   type TransactionCurrency,
 } from '@/features/transactions/form/reducer';
+import { toInput } from '@/features/transactions/form/to-input';
 import { useTitleSuggestions } from '@/features/transactions/form/use-title-suggestions';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -713,26 +714,6 @@ function hasChanges(form: FormState, initial: FormState): boolean {
     form.targetFund?.id !== initial.targetFund?.id ||
     form.date.getTime() !== initial.date.getTime()
   );
-}
-
-/** Builds the payload for the mutation from the form's state. */
-function toInput(state: FormState): TransactionInput {
-  return {
-    amount: Number(state.amount),
-    currency: state.currency,
-    type: state.type,
-    title: state.title.trim(),
-    main_category: state.mainCategory,
-    sub_category: state.subCategory,
-    date: state.date.toISOString(),
-    // A transfer only moves money between the user's own funds, so it can never
-    // meaningfully be excluded from totals — the web app forces it off.
-    hide_from_totals: state.isMoneyTransferMode ? false : state.hideFromTotals,
-    split_across_year: state.splitAcrossYear,
-    is_money_transfer: state.isMoneyTransferMode,
-    fund_category_id: state.sourceFund?.id ?? null,
-    target_fund_category_id: state.isMoneyTransferMode ? (state.targetFund?.id ?? null) : null,
-  };
 }
 
 const styles = StyleSheet.create({

@@ -14,7 +14,11 @@
  */
 
 import type { FundCategory } from '@/domain/types';
-import { initialFormState, type FormState } from '@/features/transactions/form/reducer';
+import {
+  UNRESOLVED_FUND_NAME,
+  initialFormState,
+  type FormState,
+} from '@/features/transactions/form/reducer';
 import type { PendingTransaction } from '@/features/pending/types';
 
 /**
@@ -45,7 +49,17 @@ export function formStateFromPending(
     currency: asCurrency(data.currency),
     title: data.title ?? '',
     date: new Date(data.date),
-    sourceFund: fund ? { id: fund.id, name: fund.name } : null,
+    // The bank's mapping is the only reason these rows are attributed to a fund
+    // at all, so an id whose name cannot be resolved keeps the id and takes a
+    // stand-in label. Dropping it here would silently discard the mapping the
+    // sync went to the trouble of recording, and the review screen has no fund
+    // control to put it back. See `resolveFund` in `from-transaction.ts`.
+    sourceFund: data.fund_category_id
+      ? {
+          id: data.fund_category_id,
+          name: fund?.name ?? UNRESOLVED_FUND_NAME,
+        }
+      : null,
   };
 }
 

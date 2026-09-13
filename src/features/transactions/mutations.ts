@@ -14,7 +14,10 @@
  *     not after, so a failure leaves nothing behind.
  *  2. **Bonus rows are never edited or deleted.** Row-level security silently
  *     refuses the write — PostgREST reports success with zero rows affected — so
- *     the check is repeated client-side to produce a real error.
+ *     the check is repeated client-side to produce a real error. Deleting a
+ *     parent is nevertheless safe: a composite foreign key with `on delete
+ *     cascade` removes its children atomically, and referential-integrity
+ *     triggers bypass RLS.
  *  3. **A date change across a month boundary moves the row between caches.**
  *     Both months must be updated, and both invalidated.
  */
@@ -141,18 +144,20 @@ async function withEurConversion(
  * case is correct immediately and the refetch only confirms it.
  *
  * @param queryClient The client to invalidate against.
- * @param options What was written.
  */
-export function invalidateAfterWrite(
-  queryClient: QueryClient,
-  options: { split?: boolean } = {},
-): void {
+export function invalidateAfterWrite(queryClient: QueryClient): void {
   // Prefixes, so each covers every period at once.
   const families: ReadonlyArray<readonly unknown[]> = [
     [TX, 'month'],
     [TX, 'year'],
     [TX, 'range'],
     [TX, 'anchored'],
+    // The single-row cache the edit screen reads. It covers every id at once.
+    [TX, 'one'],
+    // `staleTime: Infinity` and persisted, so only an invalidation can ever
+    // refresh it — and the month selector is built from it, which makes a
+    // newly-entered earlier date unreachable without this.
+    qk.firstTransactionDate(),
     // Balances, not the fund list: a transaction moves money within a fund
     // rather than changing which funds exist, so refetching the cheap list
     // would be pointless while missing the thing that actually changed.
@@ -161,12 +166,6 @@ export function invalidateAfterWrite(
 
   for (const queryKey of families) {
     void queryClient.invalidateQueries({ queryKey });
-  }
-
-  if (options.split) {
-    // Split instances are synthesised from a source row and appear in months
-    // beyond the source's own, so the split-source caches have to go too.
-    void queryClient.invalidateQueries({ queryKey: [TX, 'split'] });
   }
 }
 
@@ -234,7 +233,7 @@ export function useAddTransaction() {
     },
 
     onSettled: (_data, _error, input) => {
-      invalidateAfterWrite(queryClient, { split: input.split_across_year });
+      invalidateAfterWrite(queryClient);
     },
   });
 }
@@ -285,8 +284,17 @@ export function useUpdateTransaction() {
       return data as Transaction;
     },
 
-    onSettled: (_data, _error, { changes }) => {
-      invalidateAfterWrite(queryClient, { split: changes.split_across_year });
+    onSuccess: (updated) => {
+      // Written, not merely invalidated. The edit screen seeds its form from
+      // this key and `useReducer` reads its initial state once, so a stale row
+      // left in the cache would be handed to the form and the user's next save
+      // would put the old values back. Marking it stale refetches *after* that
+      // has already happened.
+      queryClient.setQueryData(qk.one(updated.id), updated);
+    },
+
+    onSettled: () => {
+      invalidateAfterWrite(queryClient);
     },
   });
 }
