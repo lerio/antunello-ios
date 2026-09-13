@@ -65,7 +65,8 @@ npm start                       # Metro only — JS changes reload instantly
 
 **The app on the phone does not carry any JavaScript.** It is a debug build, so
 it fetches its bundle from Metro over the LAN at launch — the address is baked
-into the app as `ip.txt` (currently `<lan-address>:8081`) when it is installed.
+into the app as `ip.txt` (the Mac's LAN address and Metro's port — e.g.
+`192.168.1.50:8081`) when it is installed.
 Metro therefore has to be running *before* the app is opened, and since Metro is
 a foreground process in a terminal, **closing or restarting that terminal breaks
 the app** until it is started again:
@@ -176,10 +177,10 @@ development certificate looks like:
 
 ```
 subject=UID=<cert-id>, CN=Apple Development: you@example.com (<cert-cn-id>), OU=<team-id>
-                  └ cert id            └ personal team id                    └ TEAM ID
+                  └ cert id            └ personal team id                  └ TEAM ID
 ```
 
-`<team-id>` is the team ID. Using the value in the common name produces
+The `OU` value is the team ID. Using the value in the common name produces
 `No Account for Team "…"`, which sounds like a credentials problem but is not.
 
 **2. The WWDR G3 intermediate must be in the keychain.** Without it, a perfectly
@@ -212,8 +213,8 @@ cd ios && xcodebuild \
 the **xctrace** UDID, not the `devicectl` UUID:
 
 ```bash
-xcrun xctrace list devices        # what expo wants: <device-udid>
-xcrun devicectl list devices      # a different id: <devicectl-uuid>-…
+xcrun xctrace list devices        # what expo wants: <xctrace-udid>
+xcrun devicectl list devices      # a different id: <devicectl-uuid>
 ```
 
 Passing the devicectl UUID yields `No device UDID or name matching`.

@@ -14,9 +14,16 @@
  * stays diffable against its upstream source.
  */
 
-/** Absolute path to the web app, overridable for CI or a different checkout. */
+import { fileURLToPath } from 'node:url';
+
+/**
+ * Absolute path to the web app, overridable for CI or a different checkout.
+ *
+ * Defaults to the sibling `antunello-app` checkout, resolved from this file's
+ * own location so it holds regardless of the working directory.
+ */
 export const WEB_REPO =
-  process.env.WEB_REPO ?? '/Users/you/Sources/personal/antunello-app';
+  process.env.WEB_REPO ?? fileURLToPath(new URL('../../antunello-app', import.meta.url));
 
 /**
  * Web-repo import alias → local relative specifier.
