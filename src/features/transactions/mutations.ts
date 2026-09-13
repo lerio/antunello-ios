@@ -27,7 +27,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { Transaction } from '@/domain/types';
 import { convertToEUR, toRateDate } from '@/features/transactions/exchange-rates';
+import { fetchTransaction } from '@/features/transactions/queries';
 import { TX, qk } from '@/lib/query-keys';
+import { requireUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 /** Fields a caller supplies when creating or editing. */
@@ -69,31 +71,6 @@ export function isOptimisticId(id: string): boolean {
   return id.startsWith(OPTIMISTIC_ID_PREFIX);
 }
 
-/**
- * The signed-in user's id.
- *
- * Required on insert: the row-level security policy for `transactions` is
- * `auth.uid() = user_id`, and `user_id` has no database default — so a row
- * inserted without it fails with `42501 new row violates row-level security
- * policy` rather than a helpful "column is required".
- *
- * Read from the local session rather than `auth.getUser()`. The id is already
- * the one inside the access token, which is what the policy compares against, so
- * a server round-trip would confirm nothing extra.
- *
- * @throws If there is no session.
- */
-async function requireUserId(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user.id) {
-    throw new Error('You are not signed in.');
-  }
-
-  return session.user.id;
-}
 
 /** The month a date falls in, as the cache keys address it. */
 function monthOf(isoDate: string): { year: number; month: number } {
@@ -416,17 +393,6 @@ export function useAddBonusTransactions() {
   });
 }
 
-/** Fetches one transaction, preferring whatever is already cached. */
-async function fetchTransaction(id: string): Promise<Transaction | null> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data as Transaction) ?? null;
-}
 
 /** Newest first, matching the fetcher's ordering. */
 function sortByDate(rows: Transaction[]): Transaction[] {

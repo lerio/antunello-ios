@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -23,9 +24,8 @@ import { FilterSheet } from '@/features/filter/components/filter-sheet';
 import { useFilteredTransactions } from '@/features/filter/use-filtered-transactions';
 import { SearchSummary } from '@/features/search/components/search-summary';
 import { DayHeader } from '@/features/transactions/components/day-header';
-import { TransactionRow } from '@/features/transactions/components/transaction-row';
+import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { groupTransactionsByDay, type DayGroup } from '@/features/transactions/group-by-day';
-import { isOptimisticId } from '@/features/transactions/mutations';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -60,41 +60,7 @@ export function FilterView() {
     setHasInteracted(true);
   }, []);
 
-  const handlePressTransaction = useCallback(
-    (transaction: Transaction) => {
-      if (isOptimisticId(transaction.id)) return;
-      router.push(`/transaction/${transaction.id}`);
-    },
-    [router],
-  );
-
-  const handleCategoryPress = useCallback(
-    (category: string) => {
-      router.push(`/transactions/category/${encodeURIComponent(category)}`);
-    },
-    [router],
-  );
-
-  const handleSubCategoryPress = useCallback(
-    (category: string, subCategory: string) => {
-      router.push(
-        `/transactions/category/${encodeURIComponent(category)}/${encodeURIComponent(subCategory)}`,
-      );
-    },
-    [router],
-  );
-
-  const renderItem = useCallback(
-    ({ item }: { item: Transaction }) => (
-      <TransactionRow
-        transaction={item}
-        onPress={handlePressTransaction}
-        onCategoryPress={handleCategoryPress}
-        onSubCategoryPress={handleSubCategoryPress}
-      />
-    ),
-    [handlePressTransaction, handleCategoryPress, handleSubCategoryPress],
-  );
+  const { renderItem } = useTransactionRowNavigation();
 
   // Only an all-time filter mixes years, so only then does the header need one.
   const showYear = isAllTime(criteria);
@@ -248,16 +214,6 @@ function FilterPlaceholder({
   return <EmptyState title="No matches" detail="No transactions match the current filters." />;
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return (
-    <View style={styles.centered}>
-      <ThemedText type="subtitle">{title}</ThemedText>
-      <ThemedText themeColor="textSecondary" style={styles.emptyDetail}>
-        {detail}
-      </ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   bar: {
@@ -322,8 +278,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.two,
     padding: Spacing.four,
-  },
-  emptyDetail: {
-    textAlign: 'center',
   },
 });

@@ -11,6 +11,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import type { Budget } from '@/domain/types';
 import { qk } from '@/lib/query-keys';
+import { requireUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -25,25 +26,6 @@ export async function fetchBudgets(): Promise<Budget[]> {
   return (data ?? []) as Budget[];
 }
 
-/**
- * The signed-in user's id.
- *
- * Read from the local session rather than the network: `auth.getUser()` makes a
- * round trip on every write, and the id it returns is the one already in the
- * session.
- *
- * @returns The user id.
- * @throws When there is no session, which means the write cannot be attributed.
- */
-async function requireUserId(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user.id) throw new Error('You are not signed in.');
-
-  return session.user.id;
-}
 
 /**
  * Creates a budget.

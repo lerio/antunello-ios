@@ -3,18 +3,17 @@ import { useCallback, useMemo } from 'react';
 import { RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 
 import { AddTransactionButton } from '@/components/add-transaction-button';
+import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { SkeletonRows } from '@/components/skeleton';
-import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
 import { DayHeader } from '@/features/transactions/components/day-header';
+import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { ListToolbar } from '@/features/transactions/components/list-toolbar';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
-import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import { ViewTabs } from '@/features/transactions/components/view-tabs';
 import type { DayGroup } from '@/features/transactions/group-by-day';
-import { isOptimisticId } from '@/features/transactions/mutations';
 import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
 import {
   findMonthIndex,
@@ -49,47 +48,7 @@ export function MonthView() {
     [router],
   );
 
-  const handlePressTransaction = useCallback(
-    (transaction: Transaction) => {
-      // A row that is still saving carries only a placeholder id, so there is
-      // no record to open yet. Brief in practice — it is replaced by the real
-      // row as soon as the insert returns.
-      if (isOptimisticId(transaction.id)) return;
-      router.push(`/transaction/${transaction.id}`);
-    },
-    [router],
-  );
-
-  // Stable identities, so a re-render of this screen does not make the list
-  // treat every row as changed. Passing a fresh closure each render was causing
-  // the whole month to re-render, which on a long month is visible as a stall.
-  const handleCategoryPress = useCallback(
-    (category: string) => {
-      router.push(`/transactions/category/${encodeURIComponent(category)}`);
-    },
-    [router],
-  );
-
-  const handleSubCategoryPress = useCallback(
-    (category: string, subCategory: string) => {
-      router.push(
-        `/transactions/category/${encodeURIComponent(category)}/${encodeURIComponent(subCategory)}`,
-      );
-    },
-    [router],
-  );
-
-  const renderItem = useCallback(
-    ({ item }: { item: Transaction }) => (
-      <TransactionRow
-        transaction={item}
-        onPress={handlePressTransaction}
-        onCategoryPress={handleCategoryPress}
-        onSubCategoryPress={handleSubCategoryPress}
-      />
-    ),
-    [handlePressTransaction, handleCategoryPress, handleSubCategoryPress],
-  );
+  const { renderItem } = useTransactionRowNavigation();
 
   const renderSectionHeader = useCallback(
     ({ section }: { section: DayGroup }) => <DayHeader day={section} />,
@@ -160,16 +119,6 @@ function usePeriodParams() {
   return { year, month };
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return (
-    <View style={styles.centered}>
-      <ThemedText type="subtitle">{title}</ThemedText>
-      <ThemedText themeColor="textSecondary" style={styles.emptyDetail}>
-        {detail}
-      </ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   toolbar: {
@@ -185,15 +134,5 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingBottom: Spacing.five,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.two,
-    padding: Spacing.four,
-  },
-  emptyDetail: {
-    textAlign: 'center',
   },
 });

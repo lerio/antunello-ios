@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
@@ -43,11 +44,13 @@ export function BudgetsView() {
           <ActivityIndicator style={styles.loading} />
         ) : isError ? (
           <EmptyState
+            style={styles.empty}
             title="Couldn’t load budgets"
             detail={error instanceof Error ? error.message : 'Unknown error'}
           />
         ) : items.length === 0 ? (
           <EmptyState
+            style={styles.empty}
             title="No budgets yet"
             detail="Set a monthly limit for a category to track it here."
           />
@@ -161,16 +164,6 @@ function ProgressBar({
   );
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return (
-    <View style={styles.empty}>
-      <ThemedText type="subtitle">{title}</ThemedText>
-      <ThemedText themeColor="textSecondary" style={styles.emptyDetail}>
-        {detail}
-      </ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   header: {
@@ -258,8 +251,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.six,
-  },
-  emptyDetail: {
-    textAlign: 'center',
   },
 });

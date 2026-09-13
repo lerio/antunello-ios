@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { AddTransactionButton } from '@/components/add-transaction-button';
+import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -18,9 +19,8 @@ import type { Transaction } from '@/domain/types';
 import { SearchSummary } from '@/features/search/components/search-summary';
 import { useTransactionSearch } from '@/features/search/use-transaction-search';
 import { DayHeader } from '@/features/transactions/components/day-header';
-import { TransactionRow } from '@/features/transactions/components/transaction-row';
+import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { groupTransactionsByDay, type DayGroup } from '@/features/transactions/group-by-day';
-import { isOptimisticId } from '@/features/transactions/mutations';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -47,45 +47,8 @@ export function SearchView() {
     [results],
   );
 
-  const handlePressTransaction = useCallback(
-    (transaction: Transaction) => {
-      // A row mid-insert carries a placeholder id with no record behind it yet.
-      if (isOptimisticId(transaction.id)) return;
-      router.push(`/transaction/${transaction.id}`);
-    },
-    [router],
-  );
+  const { renderItem } = useTransactionRowNavigation();
 
-  const handleCategoryPress = useCallback(
-    (category: string) => {
-      router.push(`/transactions/category/${encodeURIComponent(category)}`);
-    },
-    [router],
-  );
-
-  const handleSubCategoryPress = useCallback(
-    (category: string, subCategory: string) => {
-      router.push(
-        `/transactions/category/${encodeURIComponent(category)}/${encodeURIComponent(subCategory)}`,
-      );
-    },
-    [router],
-  );
-
-  const renderItem = useCallback(
-    ({ item }: { item: Transaction }) => (
-      <TransactionRow
-        transaction={item}
-        onPress={handlePressTransaction}
-        onCategoryPress={handleCategoryPress}
-        onSubCategoryPress={handleSubCategoryPress}
-      />
-    ),
-    [handlePressTransaction, handleCategoryPress, handleSubCategoryPress],
-  );
-
-  // The year is always shown here: results span every year on record, so a bare
-  // "Monday, August 2" would not say which one.
   const renderSectionHeader = useCallback(
     ({ section }: { section: DayGroup }) => <DayHeader day={section} showYear />,
     [],
@@ -201,16 +164,6 @@ function SearchPlaceholder({
   return <EmptyState title="No transactions found" detail={`Nothing matches “${searchedQuery}”.`} />;
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return (
-    <View style={styles.centered}>
-      <ThemedText type="subtitle">{title}</ThemedText>
-      <ThemedText themeColor="textSecondary" style={styles.emptyDetail}>
-        {detail}
-      </ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   searchRow: {
@@ -248,8 +201,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.two,
     padding: Spacing.four,
-  },
-  emptyDetail: {
-    textAlign: 'center',
   },
 });

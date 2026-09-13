@@ -7,10 +7,10 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { CATEGORIES_WITH_TYPES, SUB_CATEGORIES } from '@/domain/types';
-import type { Transaction } from '@/domain/types';
 import { CategoryChart } from '@/features/category/category-chart';
 import { useCategoryTransactions } from '@/features/category/use-category-transactions';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
+import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { symbolForCategory } from '@/lib/sf-symbols';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimeRange } from '@/lib/query-keys';
@@ -31,6 +31,10 @@ type CategoryViewProps = {
 export function CategoryView({ category, subCategory }: CategoryViewProps) {
   const theme = useTheme();
   const router = useRouter();
+  // The shared handlers, so this screen gets the optimistic-row guard the other
+  // three list screens have — its own copy had lost it. Called here, above the
+  // early returns below, because a hook cannot be conditional.
+  const { openTransaction } = useTransactionRowNavigation();
   const [timeRange, setTimeRange] = useState<TimeRange>('1y');
 
   const isValid = isValidCategory(category, subCategory);
@@ -53,10 +57,6 @@ export function CategoryView({ category, subCategory }: CategoryViewProps) {
       </Screen>
     );
   }
-
-  const handlePressTransaction = (transaction: Transaction) => {
-    router.push(`/transaction/${transaction.id}`);
-  };
 
   return (
     <Screen>
@@ -109,7 +109,7 @@ export function CategoryView({ category, subCategory }: CategoryViewProps) {
               <View
                 key={transaction.id}
                 style={[styles.listRow, { borderBottomColor: theme.separator }]}>
-                <TransactionRow transaction={transaction} onPress={handlePressTransaction} />
+                <TransactionRow transaction={transaction} onPress={openTransaction} />
               </View>
             ))}
           </View>
