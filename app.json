@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.lerio.antunello",
-      "appleTeamId": "<team-id>",
+      "appleTeamId": "ZL9D74FVA7",
       "icon": "./assets/expo.icon",
       "supportsTablet": false,
       "infoPlist": {
