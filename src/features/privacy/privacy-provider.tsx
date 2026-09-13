@@ -51,16 +51,12 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggle = useCallback(() => {
-    setEnabledState((current) => {
-      const next = !current;
-      try {
-        Storage.setItemSync(STORAGE_KEY, String(next));
-      } catch {
-        // as above
-      }
-      return next;
-    });
-  }, []);
+    // Through `setEnabled` rather than writing storage inside the updater.
+    // Updaters must be pure and React may invoke them more than once, so a
+    // side effect there is a Rules-of-React violation even when the write
+    // happens to be idempotent.
+    setEnabled(!enabled);
+  }, [enabled, setEnabled]);
 
   const value = useMemo<PrivacyState>(
     () => ({ enabled, setEnabled, toggle }),

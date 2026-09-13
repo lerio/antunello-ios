@@ -300,10 +300,18 @@ export function useUpdateTransaction() {
 }
 
 /**
- * Deletes a transaction and any bonus rows generated from it.
+ * Deletes a transaction, and with it any bonus rows generated from it.
  *
- * The children are removed explicitly rather than relying on the database's
- * cascade, so that a failure partway through is visible instead of silent.
+ * The children go with the parent through the database, not through a second
+ * statement here. That is not a shortcut — the delete policy is
+ * `auth.uid() = user_id and bonus_kind is null`, so a `.delete()` aimed at the
+ * child rows matches nothing and reports success while deleting nothing, and a
+ * composite foreign key with `on delete cascade` removes them atomically
+ * (referential-integrity triggers bypass row-level security). The web app does
+ * the same. An earlier version of this function issued that child delete
+ * explicitly, with a comment claiming it made a partial failure visible; it
+ * could not delete anything, and the comment described a property the code did
+ * not have.
  *
  * @returns A mutation; call `.mutateAsync(id)` to run it.
  */
@@ -325,13 +333,6 @@ export function useDeleteTransaction() {
       if (existing?.bonus_kind) {
         throw new Error('Bonus transactions cannot be deleted.');
       }
-
-      const { error: childError } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('parent_transaction_id', id);
-
-      if (childError) throw childError;
 
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;

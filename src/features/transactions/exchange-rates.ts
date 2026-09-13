@@ -65,6 +65,11 @@ async function getFallbackExchangeRate(targetCurrency: string): Promise<Exchange
     .select('*')
     .eq('base_currency', 'EUR')
     .eq('target_currency', targetCurrency)
+    // Only real rates, matching the web app. Without this a fallback can be a
+    // fallback: an approximate rate gets stored for a date it never applied to,
+    // and the next lookup treats it as genuine — so the error compounds with
+    // every missed fetch instead of staying bounded to one.
+    .eq('is_missing', false)
     .order('date', { ascending: false })
     .limit(1)
     .maybeSingle();

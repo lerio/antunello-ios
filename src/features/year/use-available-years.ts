@@ -26,9 +26,8 @@ export type YearOption = StripItem & {
  * @param today Reference date; defaults to now.
  * @returns Year options with today/future flags.
  */
-export function useAvailableYears(today: Date = new Date()): YearOption[] {
+export function useAvailableYears(currentYear = new Date().getFullYear()): YearOption[] {
   return useMemo(() => {
-    const currentYear = today.getFullYear();
     const years: YearOption[] = [];
 
     for (let year = FIRST_YEAR; year <= currentYear + YEARS_AHEAD; year += 1) {
@@ -42,7 +41,7 @@ export function useAvailableYears(today: Date = new Date()): YearOption[] {
     }
 
     return years;
-  }, [today]);
+  }, [currentYear]);
 }
 
 /**

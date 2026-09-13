@@ -61,10 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    // The persisted query cache holds transaction titles and amounts in plain
-    // SQLite, so it must not outlive the session.
-    await clearQueryCache();
+    // The cache is cleared whether or not the sign-out reaches the server. A
+    // failed request still means the user asked to be signed out, and the
+    // persisted cache holds transaction titles and amounts in plain SQLite —
+    // so leaving it behind is the worse of the two failures. The error is
+    // re-thrown for the caller to report.
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      // The persisted query cache holds transaction titles and amounts in plain
+      // SQLite, so it must not outlive the session.
+      await clearQueryCache();
+    }
   }, []);
 
   const value = useMemo<AuthState>(

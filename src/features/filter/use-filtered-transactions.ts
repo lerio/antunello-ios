@@ -77,7 +77,10 @@ export function useFilteredTransactions(
     isError: active && result.isError,
     error: result.error,
     refresh: async () => {
-      await result.refetch();
+      // `refetch` bypasses `enabled`, so without this an untouched filter
+      // screen would pull the unfiltered 500-row query and then throw the
+      // result away — the exact thing the `active` guard exists to prevent.
+      if (active) await result.refetch();
     },
   };
 }

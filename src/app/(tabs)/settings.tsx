@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { BankIntegrations } from '@/features/settings/components/bank-integrations';
+import { messageOf } from '@/lib/errors';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -22,7 +23,16 @@ export default function SettingsScreen() {
   function confirmSignOut() {
     Alert.alert('Sign out?', 'You will need to sign in again to see your data.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        // Report a failure rather than discarding it: the local cache is
+        // cleared either way, so a silent failure leaves the user apparently
+        // signed out with an empty app and no explanation.
+        onPress: () => {
+          signOut().catch((error) => Alert.alert('Could not sign out', messageOf(error)));
+        },
+      },
     ]);
   }
 

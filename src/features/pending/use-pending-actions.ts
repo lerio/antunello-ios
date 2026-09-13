@@ -16,8 +16,13 @@
  * real amount. Deleting the row puts the user back where they started, able to
  * accept again or skip.
  *
- * The pending row is only marked `added` after everything else succeeded, so a
- * failure anywhere leaves it queued.
+ * The pending row is only marked `added` after everything else succeeded. That
+ * was meant to make failure safe — a queued row can be reviewed again — but for
+ * a failure *after* the money is committed it did the opposite: the row stayed
+ * queued with the transaction already written, and reviewing it again inserted a
+ * second copy. There is no idempotency key on the insert. So every failure past
+ * the first write now rolls the card row back, which is what makes the retry
+ * safe rather than duplicating.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,6 +37,7 @@ import {
   useDeleteTransaction,
   type TransactionInput,
 } from '@/features/transactions/mutations';
+import { messageOf } from '@/lib/errors';
 import { qk } from '@/lib/query-keys';
 
 export type AcceptResult = {
@@ -81,26 +87,52 @@ export function useAcceptPending() {
     }): Promise<AcceptResult> => {
       const card = await addTransaction.mutateAsync(input);
 
+      /**
+       * Removes the card row this accept just wrote.
+       *
+       * Used by every failure that happens *after* the money is committed, so
+       * the accept can be retried cleanly. Its own failure is logged rather
+       * than swallowed: if it does not succeed the card row survives, and
+       * without a trace there is nothing to correlate the duplicate against.
+       */
+      async function rollback(reason: string): Promise<never> {
+        try {
+          await deleteTransaction.mutateAsync(card.id);
+        } catch (rollbackError) {
+          console.error(
+            'Rollback failed; the transaction row survives and the pending row is still queued:',
+            card.id,
+            messageOf(rollbackError),
+          );
+          throw new Error(
+            `The transaction was saved but ${reason}, and removing it also failed — it is still ` +
+              `there and still queued, so check the transactions list before retrying.`,
+          );
+        }
+
+        throw new Error(`The transaction was saved but ${reason}, so it has been removed.`);
+      }
+
       const { rows, warnings } = buildTrBonusRows(pending, card.id, [...funds]);
 
       if (rows.length > 0) {
         try {
           await addBonuses.mutateAsync(rows);
         } catch (bonusError) {
-          // Compensate. If this also fails there is nothing further to try, and
-          // the error below is the one that matters — the card row is still
-          // there and the pending row is still queued.
-          await deleteTransaction.mutateAsync(card.id).catch(() => undefined);
-
-          throw new Error(
-            `The transaction was saved but its bonuses were not, so it has been removed. ${
-              bonusError instanceof Error ? bonusError.message : String(bonusError)
-            }`,
-          );
+          return rollback(`its bonuses were not (${messageOf(bonusError)})`);
         }
       }
 
-      await setPendingStatus(pending.id, 'added');
+      // The last step, and the one that must not be skipped. Failing here used
+      // to leave the money written while the row stayed queued — and the user,
+      // just told the save failed, would review it again and insert a second
+      // copy. There is no idempotency key on the insert, so a duplicate here is
+      // a real duplicate. Rolling back is what makes a retry safe.
+      try {
+        await setPendingStatus(pending.id, 'added');
+      } catch (statusError) {
+        return rollback(`the bank row could not be closed (${messageOf(statusError)})`);
+      }
 
       return { warnings };
     },
