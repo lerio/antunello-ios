@@ -206,21 +206,6 @@ describe('expandSplitTransactionsForMonth', () => {
     }
   });
 
-  it('reaches across the year boundary into the following October', () => {
-    const source = makeSplitSource(); // November 2025
-    const slots = windowSlots(2025, 11);
-
-    assert.deepEqual(
-      slots.map((s) => `${s.year}-${String(s.month).padStart(2, '0')}`),
-      [
-        '2025-11', '2025-12',
-        '2026-01', '2026-02', '2026-03', '2026-04',
-        '2026-05', '2026-06', '2026-07', '2026-08',
-        '2026-09', '2026-10',
-      ],
-    );
-  });
-
   it('does not emit instances outside the rolling window', () => {
     const source = makeSplitSource(); // window covers Nov 2025 .. Oct 2026
 

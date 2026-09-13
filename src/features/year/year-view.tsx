@@ -159,7 +159,6 @@ function SummaryRow({
   color: string;
   emphasise?: boolean;
 }) {
-  const theme = useTheme();
   const average = getMonthlyAverage(total, months);
   const change = getDifferenceFromPreviousYear(total, previousTotal, months);
   const percent = percentageChange(average, getMonthlyAverage(previousTotal, months));
@@ -170,13 +169,12 @@ function SummaryRow({
         <ThemedText themeColor={emphasise ? 'text' : 'textSecondary'} style={styles.rowLabel}>
           {label}
         </ThemedText>
-        <PrivacyValue
-          themeColor="textSecondary"
-          style={styles.average}
-          // One string: `PrivacyValue` takes a single child, and two adjacent
-          // ones — the figure and the unit — arrive as an array.
-          children={`${formatCurrency(average, 'EUR')}/mo`}
-        />
+        {/* One string, not two adjacent expressions: `PrivacyValue` takes a
+            single child, and the figure and the unit would otherwise arrive as
+            an array it cannot redact coherently. */}
+        <PrivacyValue themeColor="textSecondary" style={styles.average}>
+          {`${formatCurrency(average, 'EUR')}/mo`}
+        </PrivacyValue>
       </View>
 
       <View style={styles.summaryAmounts}>
@@ -271,7 +269,6 @@ function CategoryRow({
   previous: number;
   color: string;
 }) {
-  const theme = useTheme();
   const percent = percentageChange(total, previous);
 
   return (

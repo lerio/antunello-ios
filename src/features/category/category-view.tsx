@@ -10,7 +10,6 @@ import { CATEGORIES_WITH_TYPES, SUB_CATEGORIES } from '@/domain/types';
 import type { Transaction } from '@/domain/types';
 import { CategoryChart } from '@/features/category/category-chart';
 import { useCategoryTransactions } from '@/features/category/use-category-transactions';
-import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import { symbolForCategory } from '@/lib/sf-symbols';
 import { useTheme } from '@/hooks/use-theme';

@@ -13,7 +13,6 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
-import type { AnchoredDataPoint } from '@/features/balance/balance-series';
 import { useBalanceHistory } from '@/features/balance/use-balance-history';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { useTheme } from '@/hooks/use-theme';
@@ -130,13 +129,12 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
               {formatCurrency(pressed.balance, 'EUR')}
             </PrivacyValue>
             {pressed.splitAdjustedBalance !== null ? (
-              <PrivacyValue
-                themeColor="textSecondary"
-                style={styles.tooltipSplit}
-                // Built as one string rather than interpolated in JSX, because
-                // `PrivacyValue` takes a single string or number child.
-                children={`⑂ ${formatCurrency(pressed.splitAdjustedBalance, 'EUR')}`}
-              />
+              // One string, not two adjacent expressions: `PrivacyValue`
+              // takes a single child, and the figure and unit would otherwise
+              // arrive as an array it cannot redact coherently.
+              <PrivacyValue themeColor="textSecondary" style={styles.tooltipSplit}>
+                {`⑂ ${formatCurrency(pressed.splitAdjustedBalance, 'EUR')}`}
+              </PrivacyValue>
             ) : null}
           </View>
         ) : null}

@@ -147,7 +147,7 @@ async function withEurConversion(
  */
 export function invalidateAfterWrite(queryClient: QueryClient): void {
   // Prefixes, so each covers every period at once.
-  const families: ReadonlyArray<readonly unknown[]> = [
+  const families: readonly (readonly unknown[])[] = [
     [TX, 'month'],
     [TX, 'year'],
     [TX, 'range'],

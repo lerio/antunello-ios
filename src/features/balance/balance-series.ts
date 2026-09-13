@@ -197,7 +197,7 @@ function buildSplitAdjustments(
     // original-month instance is included, returned by the expander as the
     // source row carrying a split display amount.
     const sourceYear = new Date(source.date).getUTCFullYear();
-    const instances: Array<{ idx: number; signed: number }> = [];
+    const instances: { idx: number; signed: number }[] = [];
 
     for (let year = sourceYear; year <= nowYear; year += 1) {
       for (const instance of expandSplitTransactionsForYear([source], year, now)) {

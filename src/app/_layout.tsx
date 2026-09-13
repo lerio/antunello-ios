@@ -45,16 +45,26 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { session, isLoading } = useAuth();
-  const [startupError, setStartupError] = useState<Error | null>(null);
 
-  useEffect(() => {
+  /**
+   * The runtime guard, run **during** the first render rather than in an effect.
+   *
+   * It verifies that money formatting behaves — see `lib/runtime-check` — so it
+   * has to complete before anything that formats money is allowed to paint. An
+   * effect runs after the first commit, which is already too late: the tabs
+   * would render, and on a warm start they render amounts straight from the
+   * persisted cache. A lazy initializer runs before any child renders and still
+   * keeps the failure inside React, where it can be shown instead of thrown at
+   * module scope where nothing can catch it.
+   */
+  const [startupError] = useState<Error | null>(() => {
     try {
-      // Guards capabilities that vary by JS engine; see lib/runtime-check.
       runRuntimeChecks();
+      return null;
     } catch (error) {
-      setStartupError(error instanceof Error ? error : new Error(String(error)));
+      return error instanceof Error ? error : new Error(String(error));
     }
-  }, []);
+  });
 
   // The splash stays up until the stored session has been read, so a signed-in
   // user never sees the sign-in screen flash on a cold start.

@@ -123,7 +123,6 @@ function groupByTopLevel(funds: FundWithBalance[]): FundGroup[] {
 }
 
 function GroupRow({ group }: { group: FundGroup }) {
-  const theme = useTheme();
 
   return (
     <View style={styles.group}>
@@ -144,7 +143,6 @@ function GroupRow({ group }: { group: FundGroup }) {
 }
 
 function FundRow({ fund }: { fund: FundWithBalance }) {
-  const theme = useTheme();
   const isForeign = fund.currency !== 'EUR';
 
   return (
