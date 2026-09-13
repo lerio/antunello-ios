@@ -153,7 +153,7 @@ shows on the phone; nothing at runtime reads it.
 
 ```bash
 npm run typecheck               # app config + test config
-npm test                        # vendored domain tests, under Node via tsx
+npm test                        # pure-logic tests, under Node via tsx
 npm run parity                  # drift check against ../antunello-app
 ```
 
@@ -223,7 +223,7 @@ Worth doing whenever Metro is expected to stay up during a build. Xcode left
 open in the background adds to the pressure and is worth quitting between
 sessions.
 
-**5. The `xcode` npm package's `writeSync()` does not persist in this setup.**
+**6. The `xcode` npm package's `writeSync()` does not persist in this setup.**
 Both a config plugin and a standalone patch script reported success while
 changing nothing. Do not rely on programmatic edits to `project.pbxproj` — verify
 the file actually changed, and prefer command-line build-setting overrides.

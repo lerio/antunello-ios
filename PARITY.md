@@ -52,6 +52,8 @@ sha256 of that source after import rewriting:
 | `src/domain/transaction-utils.ts` | `utils/transaction-utils.ts` | exact |
 | `src/domain/tr-bonuses.ts` | `utils/tr-bonuses.ts` | exact |
 | `src/domain/split-transactions.ts` | `utils/split-transactions.ts` | exact |
+| `src/domain/currency.ts` | `utils/currency.ts` | exact |
+| `src/domain/fetch-all.ts` | `utils/supabase/fetch-all.ts` | exact |
 
 `exact` means byte-identical to upstream apart from `@/` import specifiers, which
 are rewritten to relative paths. The only edits applied to these files are those
@@ -95,7 +97,7 @@ Point the check at a different checkout with `WEB_REPO=/path/to/repo npm run par
 
 ### Adding a file to the shared set
 
-Add an entry to `src/domain/../scripts/domain-map.mjs` and run `npm run vendor`.
+Add an entry to `scripts/domain-map.mjs` and run `npm run vendor`.
 If the file imports an alias not yet mapped, vendoring fails loudly rather than
 emitting a broken path.
 
@@ -183,6 +185,39 @@ The **selective** rules are unchanged: in the transaction list only income is
 hidden, while day headers, summary figures and the balance total hide
 unconditionally. This is expressed by the `hidden` prop on `PrivacyValue`, and
 must be audited call-site by call-site when screens are built.
+
+### Exchange rates: a missing rate is retried rather than trusted
+
+The web app's fallback lookup takes the most recent cached rate for a currency
+regardless of whether that rate was real, so an approximation stored for one date
+can be reused for another, and then for another — the error compounds with every
+missed fetch. This app's fallback filters `is_missing = false`, so it only ever
+falls back to a genuine rate.
+
+Upstream has the same filter in `utils/currency-conversion.ts`; it was dropped
+when this file was rewritten rather than vendored, so this is a restoration
+rather than a new rule.
+
+What is *not* reproduced: the web app's retry pass over previously-missing dates,
+which the admin page drives. Without it a substituted rate stays in
+`exchange_rates` under the date it was requested for. That row is flagged
+`is_missing`, and the filter above stops it being read as a fallback — so the
+practical difference is bounded to the one date rather than spreading.
+
+### A transfer whose fund no longer resolves fails rather than saves
+
+When a stored fund id cannot be resolved to a name — it was deactivated, the
+funds list had not loaded, the fetch failed, or the provider's mapping points at
+a fund that is gone — this app keeps the id and gives it a stand-in label, so a
+save cannot silently detach a transaction from the fund its balance is summed
+into.
+
+Transfers are the exception. `normalize` regenerates a transfer's title from its
+funds' names, so a stand-in label on either fund would rewrite the title. A
+transfer whose fund cannot be resolved resolves to null instead, and validation
+blocks the save — loud, and recoverable by picking a fund. The web app would
+allow the save, keeping the old id; this is a deliberate divergence in favour of
+failing visibly.
 
 ### Charts
 
@@ -274,16 +309,6 @@ Incidentally it closed a hole: the old check compared the whole header against
 `` `Bearer ${process.env.CRON_SECRET}` ``, and with `CRON_SECRET` unset that
 string is `"Bearer undefined"` — so the literal header `Authorization: Bearer
 undefined` was accepted as a cron job and synced **every account in the table**.
-
-The status list keeps the web app's two matching rules, both in
-`integration-status.ts` with tests: a **Bunq** connection made before the bank's
-name was recorded has none, so it is identified by provider alone; and a **Trade
-Republic** connection is identified by provider because its settings carry no
-name. Get either wrong and a connection the user can see working reads as
-disconnected — which looks like data loss rather than a matching bug.
-
-The screen is also signed out the first time it opens, because
-`SFSafariViewController` has its own cookie jar. Signed in once, it remembers.
 
 The status list is the web app's, including its two matching rules, both in
 `integration-status.ts` with tests: a **Bunq** connection made before the bank's

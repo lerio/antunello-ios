@@ -29,7 +29,7 @@ Apple provisioning requires and the errors that mislead you when it goes wrong.
 
 ```bash
 npm run typecheck    # app config and test config
-npm test             # vendored domain logic
+npm test             # pure-logic tests (domain + feature modules)
 npm run parity       # drift against ../antunello-app
 ```
 

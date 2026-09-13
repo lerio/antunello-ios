@@ -11,8 +11,9 @@
  */
 
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import { QueryClient, keepPreviousData } from '@tanstack/react-query';
+import { QueryClient, focusManager, keepPreviousData } from '@tanstack/react-query';
 import Storage from 'expo-sqlite/kv-store';
+import { AppState } from 'react-native';
 
 import { isPersistedKey } from '@/lib/query-keys';
 
@@ -33,6 +34,23 @@ function isClientError(error: unknown): boolean {
   return typeof status === 'number' && status >= 400 && status < 500;
 }
 
+/**
+ * Tells React Query when the app has come back to the foreground.
+ *
+ * React Native has no window-focus events, so `refetchOnWindowFocus` would do
+ * nothing on its own — which is how this app came to document a foreground
+ * refresh it did not have. App-state changes are the native equivalent, and
+ * TanStack's focus manager is the seam for them: with this wired, returning to
+ * the app refetches whatever has gone stale, exactly as the docs describe.
+ */
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener('change', (status) => {
+    handleFocus(status === 'active');
+  });
+
+  return () => subscription.remove();
+});
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -47,9 +65,10 @@ export const queryClient = new QueryClient({
       placeholderData: keepPreviousData,
       retry: (count, error) => !isClientError(error) && count < 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-      // React Native has no window focus events; foreground refresh is handled
-      // explicitly by the sync provider.
-      refetchOnWindowFocus: false,
+      // Meaningful only because of the focus-manager wiring below. Returning to
+      // the app is otherwise invisible to React Query, and with no Realtime and
+      // no polling it is the only passive way remote changes arrive.
+      refetchOnWindowFocus: true,
       // Unlike the web app, which disabled this for iOS Safari tab-wake
       // reasons that do not exist natively.
       refetchOnReconnect: true,

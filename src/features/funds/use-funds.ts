@@ -2,8 +2,8 @@
  * Fund accounts.
  *
  * Only the list is fetched here — enough for the transaction form's fund picker,
- * which needs each fund's name and currency. The Home balance card also needs
- * per-fund balances converted to EUR, which arrives with Phase 2.
+ * which needs each fund's name and currency. The Home balance card needs more
+ * than this: per-fund balances converted to EUR, which is `useFundBalances`.
  */
 
 import { useQuery } from '@tanstack/react-query';

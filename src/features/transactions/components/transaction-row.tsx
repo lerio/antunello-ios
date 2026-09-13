@@ -19,7 +19,8 @@ type TransactionRowProps = {
   transaction: Transaction;
   onPress: (transaction: Transaction) => void;
   /**
-   * Opening the category and subcategory is Phase 2. When these are absent the
+   * All three list screens pass these. They stay optional because a row can be
+   * rendered without anywhere to navigate to — and when they are absent the
    * labels render as plain text rather than as dead-looking tap targets.
    */
   onCategoryPress?: (category: string) => void;
