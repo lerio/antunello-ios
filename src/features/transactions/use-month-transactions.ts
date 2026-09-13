@@ -39,7 +39,22 @@ export function useMonthTransactions(year: number, month: number): MonthTransact
     queryFn: () => fetchMonthTransactions(year, month),
   });
 
-  const transactions = useMemo(() => query.data ?? [], [query.data]);
+  /**
+   * The previous month's rows, still on screen while this month loads.
+   *
+   * Kept deliberately: paging the month strip would otherwise flash an empty
+   * list on every tap. But when the fetch *fails* the placeholder never clears,
+   * because a placeholder is data — so the list would show the previous month's
+   * transactions under the new month's header, with no error and no spinner.
+   * Dropping them only in that case lets the empty state's error branch, which
+   * is the only place `isError` is read, actually reach the screen.
+   */
+  const foreignPlaceholder = query.isPlaceholderData && query.isError;
+
+  const transactions = useMemo(
+    () => (foreignPlaceholder ? [] : (query.data ?? [])),
+    [foreignPlaceholder, query.data],
+  );
   const days = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
 
   return {

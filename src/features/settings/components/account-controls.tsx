@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -11,6 +12,7 @@ import type { IntegrationConfig } from '@/features/settings/integration-status';
 import { requestSync, useUpdateIntegrationSettings } from '@/features/settings/mutations';
 import { formatSync } from '@/features/settings/relative-time';
 import { messageOf } from '@/lib/errors';
+import { qk } from '@/lib/query-keys';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Which fund picker is open, if any. */
@@ -32,6 +34,7 @@ export function AccountControls({
   showAccountId: boolean;
 }) {
   const theme = useTheme();
+  const queryClient = useQueryClient();
   const { data: funds = [] } = useFunds();
   const updateSettings = useUpdateIntegrationSettings();
 
@@ -66,6 +69,13 @@ export function AccountControls({
       } else {
         Alert.alert('Sync complete', 'No new transactions.');
       }
+
+      // A sync moves both of the things this screen does not own: the queue the
+      // tab badge and the banner read, and the timestamp in the row above. Left
+      // alone, the app would announce new transactions and then show a badge of
+      // zero until the app was backgrounded.
+      void queryClient.invalidateQueries({ queryKey: qk.pending() });
+      void queryClient.invalidateQueries({ queryKey: qk.integrations() });
     } catch (error) {
       Alert.alert('Could not sync', messageOf(error));
     } finally {

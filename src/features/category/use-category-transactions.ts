@@ -56,7 +56,11 @@ export function useCategoryTransactions(
   return {
     transactions,
     stats,
-    isLoading: query.isLoading || !hasOwnData,
+    // `!query.error` as well, so a failure is not reported as a permanent load
+    // — see the note in `use-balance-history.ts`. The view currently tests
+    // `isError` first, which hid the difference; that ordering is load-bearing
+    // and should not have to be.
+    isLoading: query.isLoading || (!hasOwnData && !query.error),
     isError: query.isError,
     refresh: async () => {
       await query.refetch();

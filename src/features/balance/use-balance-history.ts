@@ -154,7 +154,10 @@ export function useBalanceHistory(timeRange: TimeRange, anchor: number) {
 
   return {
     points,
-    isLoading: query.isLoading || !hasOwnData,
+    // A failure has no own data either, so `!hasOwnData` alone would report a
+    // permanent load and the chart's error branch could never render — it would
+    // spin forever offline. `!query.error` keeps "waiting" and "failed" apart.
+    isLoading: query.isLoading || (!hasOwnData && !query.error),
     error: query.error,
   };
 }
