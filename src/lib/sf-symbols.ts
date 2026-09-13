@@ -52,12 +52,3 @@ const CATEGORY_SYMBOLS: Record<string, SFSymbol> = {
 export function symbolForCategory(category: string): SFSymbol {
   return CATEGORY_SYMBOLS[category] ?? FALLBACK;
 }
-
-/**
- * The SF Symbol for a money movement.
- *
- * Transfers are a pseudo-category rather than a real one, so they are kept out
- * of the category map — the web app gives them their own icon for the same
- * reason.
- */
-export const TRANSFER_SYMBOL: SFSymbol = 'arrow.left.arrow.right';

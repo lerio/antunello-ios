@@ -128,7 +128,6 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   content: {
     padding: Spacing.three,
     gap: Spacing.two,

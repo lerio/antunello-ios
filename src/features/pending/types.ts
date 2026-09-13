@@ -60,8 +60,3 @@ export type PendingTransaction = {
   /** The provider's payload, kept for debugging. Not read by the app. */
   raw_data?: unknown;
 };
-
-/** How many bank rows are waiting, for the tab badge. */
-export function pendingCount(transactions: readonly PendingTransaction[]): number {
-  return transactions.length;
-}

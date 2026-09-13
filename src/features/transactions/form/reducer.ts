@@ -103,7 +103,6 @@ export type FormAction =
   | { kind: 'setFund'; which: 'source' | 'target'; value: FundRef | null }
   | { kind: 'applySuggestion'; value: TitleSuggestion }
   | { kind: 'validate' }
-  | { kind: 'reset'; state: FormState };
 
 /** A blank form for the given mode. */
 export function initialFormState(mode: FormMode = 'add'): FormState {
@@ -177,9 +176,6 @@ function normalize(state: FormState): FormState {
  */
 export function formReducer(state: FormState, action: FormAction): FormState {
   switch (action.kind) {
-    case 'reset':
-      return action.state;
-
     case 'setType':
       // Choosing a type explicitly leaves transfer mode, matching the web app's
       // type buttons.

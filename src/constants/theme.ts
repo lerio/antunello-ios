@@ -55,9 +55,6 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-/** The resolved palette for one appearance. */
-export type Theme = (typeof Colors)['light'];
-
 /**
  * System font descriptors. These are iOS-only names, which is one reason this
  * app targets iOS alone — `ui-rounded` and `ui-monospace` have no clean
@@ -104,4 +101,3 @@ export const Radius = {
  */
 export const BottomTabInset = Platform.select({ ios: 50, default: 80 }) ?? 0;
 
-export const MaxContentWidth = 800;
