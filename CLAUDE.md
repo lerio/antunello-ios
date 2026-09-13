@@ -35,7 +35,7 @@ dead code, mention it rather than deleting it.
 
 Define success criteria, then loop until verified. For multi-step work, state a
 short numbered plan with its verification checks. `npm run typecheck && npm test
-&& npm run parity` must pass before anything is called done.
+&& npm run lint && npm run parity` must pass before anything is called done.
 
 ---
 
@@ -154,8 +154,16 @@ shows on the phone; nothing at runtime reads it.
 ```bash
 npm run typecheck               # app config + test config
 npm test                        # pure-logic tests, under Node via tsx
+npm run lint                    # eslint over the whole repo, including scripts/
 npm run parity                  # drift check against ../antunello-app
 ```
+
+`lint` belongs in that list because it took work to make it mean anything. It
+reported 16 errors and had never been green, so a new problem was
+indistinguishable from the standing ones. It passes clean now — if it stops,
+that is a real signal rather than the usual noise. Note the script passes a path
+(`expo lint .`): bare `expo lint` only sees `src/app/components` and missed
+`scripts/` entirely.
 
 ### Signing: why a plain `expo run:ios` may fail
 
