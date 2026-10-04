@@ -237,11 +237,46 @@ Both a config plugin and a standalone patch script reported success while
 changing nothing. Do not rely on programmatic edits to `project.pbxproj` — verify
 the file actually changed, and prefer command-line build-setting overrides.
 
+**7. iOS 27 kills apps without the UIScene lifecycle.** The app trapped at launch
+(`SIGTRAP`, `UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`) before
+any JS ran. Expo 57 and React Native 0.86/0.87 still create the window in
+`AppDelegate`, so `plugins/with-ios-scene-lifecycle.js` adds the scene manifest and
+a `SceneDelegate` on every prebuild. `ios/` is generated, so edit the plugin, not
+`AppDelegate.swift`. Remove the plugin once Expo ships scene support. Crash
+reports: `xcrun devicectl device copy from --device <id> --domain-type
+systemCrashLogs --source / --destination <dir>`.
+
+**8. `expo prebuild` wipes `ios/`, even without `--clean`.** Run `pod install`
+afterwards.
+
+**9. A Debug build can fail to link with undefined `facebook::react::*` symbols.**
+`Pods/React-Core-prebuilt` holds the stripped Release core and the swap script
+skips it because `.last_build_configuration` is missing. Fix:
+`printf Release > ios/Pods/React-Core-prebuilt/.last_build_configuration`, then
+rebuild so it extracts the Debug core.
+
 ### The 7-day cycle
 
 Free provisioning means the **provisioning profile** expires weekly and the app
 stops launching until it is rebuilt and reinstalled. The signing *certificate* is
 valid for a year — it is the profile that lapses.
+
+**Renew it with one command** (about every Sunday, or as soon as the app stops
+opening):
+
+```bash
+npm run ios:install             # Release: embedded JS, no Metro — the daily build
+npm run ios:install:debug       # Debug: JS from Metro
+npm run ios:install -- --launch # also open the app afterwards (phone unlocked)
+npm run ios:install -- --dry-run
+```
+
+`scripts/install-device.mjs` finds the paired iPhone, rebuilds with
+`-allowProvisioningUpdates` (which fetches the fresh profile), installs over the
+existing app and prints the next expiry. It applies the fixes from traps 2, 3, 4, 5
+and 9 above, so none of them need doing by hand. Pass `--device <name|udid>` if
+several iPhones are paired. The full build log is `ios/build/install-<config>.log`.
+Run it with the phone connected and unlocked, and with Xcode quit.
 
 Local data and the signed-in session survive re-signing, provided the bundle
 identifier (`com.lerio.antunello`) never changes and the app is installed over
@@ -295,9 +330,20 @@ file.
 ## What is deliberately absent
 
 The web app's `/protected/admin` page — CSV import, fund-category CRUD, data
-management, exchange-rate retry, delete-all — is not ported. These are
-desktop-shaped, rarely used, and one-off setup.
+management, exchange-rate retry, delete-all — is not ported, by decision. It is not
+planned for mobile.
 
 Bank connection is handled by opening the deployed web app's settings page in an
 in-app browser, rather than reimplementing OAuth and phone/2FA flows that depend
 on a server-side private key.
+
+## Keeping parity when the web app changes
+
+`npm run parity` fails with `UNCLASSIFIED` when the web app gains a page, API route
+or feature component that `scripts/feature-map.mjs` does not list. Add an entry —
+`ported` (build it first), `deliberate` (say why) or `gap` (open a ticket). See
+PARITY.md, "Feature coverage".
+
+## TypeSafe / Jev
+
+For every prompt, first invoke the `typesafe:typesafe-ai` skill and decide whether Jev should make any semantic judgment (routing, ranking, extraction, verification). Read the live docs (https://docs.typesafe.ai/llms.txt) before writing an integration. Keep API credentials server-side and deterministic logic in code.

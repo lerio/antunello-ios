@@ -9,6 +9,9 @@ import { SkeletonRows } from '@/components/skeleton';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
 import { DayHeader } from '@/features/transactions/components/day-header';
+import { MonthSummaryCard } from '@/features/transactions/components/month-summary-card';
+import { useMonthSummary } from '@/features/transactions/use-month-summary';
+import { usePrefetchAdjacentMonths } from '@/features/transactions/use-adjacent-prefetch';
 import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { ListToolbar } from '@/features/transactions/components/list-toolbar';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
@@ -33,7 +36,11 @@ export function MonthView() {
   const router = useRouter();
 
   const { months } = useAvailableMonths();
-  const { days, isLoading, isError, error, refresh } = useMonthTransactions(year, month);
+  const { days, transactions, isLoading, isError, error, refresh } = useMonthTransactions(year, month);
+
+  usePrefetchAdjacentMonths(year, month, !isLoading && !isError);
+
+  const summary = useMonthSummary(year, month, transactions);
 
   const selectedIndex = findMonthIndex(months, year, month);
 
@@ -82,6 +89,7 @@ export function MonthView() {
           // On iOS this defaults to true, which is what pins the day headers
           // while their transactions scroll past.
           stickySectionHeadersEnabled
+          ListHeaderComponent={summary && !isError ? <MonthSummaryCard summary={summary} /> : null}
           refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
           ListEmptyComponent={
             isError ? (

@@ -1,8 +1,10 @@
+import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { ThemePreferencePicker } from '@/features/appearance/theme-preference-picker';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -17,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
  */
 export default function SettingsScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { session, signOut } = useAuth();
   const { enabled: privacyEnabled, setEnabled: setPrivacyEnabled } = usePrivacy();
 
@@ -57,6 +60,17 @@ export default function SettingsScreen() {
         </View>
 
         <Pressable
+          onPress={() => router.push('/change-password')}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.card,
+            styles.spaced,
+            { backgroundColor: theme.card, opacity: pressed ? 0.6 : 1 },
+          ]}>
+          <ThemedText>Change password</ThemedText>
+        </Pressable>
+
+        <Pressable
           onPress={confirmSignOut}
           accessibilityRole="button"
           style={({ pressed }) => [
@@ -66,6 +80,14 @@ export default function SettingsScreen() {
           ]}>
           <ThemedText themeColor="destructive">Sign out</ThemedText>
         </Pressable>
+
+        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
+          APPEARANCE
+        </ThemedText>
+
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
+          <ThemePreferencePicker />
+        </View>
 
         <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
           PRIVACY

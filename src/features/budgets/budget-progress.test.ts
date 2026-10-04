@@ -193,14 +193,26 @@ describe('progress against a limit', () => {
 });
 
 describe('which categories a budget may be set for', () => {
-  it('offers every main category when none are taken', () => {
-    assert.equal(selectableBudgetCategories([]).length, 20);
+  it('offers every expense category when none are taken', () => {
+    assert.equal(selectableBudgetCategories([]).length, 15);
+  });
+
+  it('never offers income categories or Money Transfer', () => {
+    const categories = selectableBudgetCategories([]);
+
+    assert.ok(!categories.includes('Primary Income'));
+    assert.ok(!categories.includes('Other Income'));
+    assert.ok(!categories.includes('Money Transfer'));
+  });
+
+  it('keeps the edited category even when it is an income category', () => {
+    assert.ok(selectableBudgetCategories([], 'Primary Income').includes('Primary Income'));
   });
 
   it('omits categories that already have a budget', () => {
     const categories = selectableBudgetCategories(['Dining']);
 
-    assert.equal(categories.length, 19);
+    assert.equal(categories.length, 14);
     assert.ok(!categories.includes('Dining'));
   });
 

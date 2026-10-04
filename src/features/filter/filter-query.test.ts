@@ -16,7 +16,7 @@ import {
   initialFilterCriteria,
   type FilterCriteria,
 } from '@/features/filter/filter-criteria';
-import { buildFundCondition, planFilterQuery } from '@/features/filter/filter-query';
+import { buildAmountCondition, buildFundCondition, planFilterQuery } from '@/features/filter/filter-query';
 
 function criteria(overrides: Partial<FilterCriteria> = {}): FilterCriteria {
   return { ...initialFilterCriteria, ...overrides };
@@ -132,6 +132,23 @@ describe('the amount filter', () => {
 
     assert.equal(plan.amountMin, 100);
     assert.equal(plan.amountMax, null);
+  });
+});
+
+describe('the amount condition', () => {
+  it('compares euros, falling back to the raw amount only for a EUR row without one', () => {
+    assert.equal(
+      buildAmountCondition('gte', 100),
+      'eur_amount.gte.100,and(eur_amount.is.null,currency.eq.EUR,amount.gte.100)',
+    );
+    assert.equal(
+      buildAmountCondition('lte', 12.5),
+      'eur_amount.lte.12.5,and(eur_amount.is.null,currency.eq.EUR,amount.lte.12.5)',
+    );
+  });
+
+  it('keeps zero as a real bound', () => {
+    assert.match(buildAmountCondition('gte', 0), /^eur_amount\.gte\.0,/);
   });
 });
 

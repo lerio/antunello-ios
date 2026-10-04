@@ -17,6 +17,9 @@
  *                  hand-edited and no longer matches what it claims to be
  *   NO-HEADER      the file carries no provenance header at all
  *
+ * It also checks feature coverage (see feature-check.mjs): every web page, API
+ * route and feature component must have a status in feature-map.mjs.
+ *
  * Exit code is 1 if anything is not OK, so this can gate a commit hook.
  *
  * Run via `npm run parity`.
@@ -27,6 +30,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { checkFeatures } from './feature-check.mjs';
 import {
   DOMAIN_MAP,
   HEADER_MARKER,
@@ -141,7 +145,19 @@ async function main() {
     );
   }
 
-  process.exit(problems.length === 0 && unlisted.length === 0 ? 0 : 1);
+  const features = await checkFeatures(WEB_REPO, ROOT);
+  const { ported, deliberate, gap } = features.counts;
+
+  console.log(`\nFeatures: ${ported} ported, ${deliberate} deliberate, ${gap} known gap(s)`);
+  for (const entry of features.gaps) console.log(`  gap           ${entry.web}\n                ${entry.note}`);
+
+  if (features.problems.length > 0) {
+    console.log(`\n${features.problems.length} feature problem(s):\n`);
+    for (const problem of features.problems) console.log(`  ${problem}`);
+  }
+
+  const ok = problems.length === 0 && unlisted.length === 0 && features.problems.length === 0;
+  process.exit(ok ? 0 : 1);
 }
 
 main().catch((error) => {

@@ -27,7 +27,11 @@
  */
 
 import type { Transaction } from '@/domain/types';
-import { planFilterQuery, buildFundCondition } from '@/features/filter/filter-query';
+import {
+  buildAmountCondition,
+  buildFundCondition,
+  planFilterQuery,
+} from '@/features/filter/filter-query';
 import type { FilterCriteria } from '@/features/filter/filter-criteria';
 import { fetchSplitSources } from '@/features/transactions/queries';
 import { expandSplitTransactionsForMonth, expandSplitTransactionsForYear } from '@/domain/split-transactions';
@@ -68,8 +72,8 @@ export async function fetchFilteredTransactions(
   // conditions are alternatives, between calls they must both hold. That is what
   // makes "expense, from this fund" mean both things at once.
   if (plan.funds) query = query.or(buildFundCondition(plan.funds));
-  if (plan.amountMin !== null) query = query.gte('amount', plan.amountMin);
-  if (plan.amountMax !== null) query = query.lte('amount', plan.amountMax);
+  if (plan.amountMin !== null) query = query.or(buildAmountCondition('gte', plan.amountMin));
+  if (plan.amountMax !== null) query = query.or(buildAmountCondition('lte', plan.amountMax));
   if (plan.currencies) query = query.in('currency', plan.currencies);
   if (plan.dateBounds) {
     query = query.gte('date', plan.dateBounds.start).lt('date', plan.dateBounds.end);

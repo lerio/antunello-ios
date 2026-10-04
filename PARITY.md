@@ -95,6 +95,37 @@ Three hashes are compared per file:
 
 Point the check at a different checkout with `WEB_REPO=/path/to/repo npm run parity`.
 
+### Feature coverage
+
+The hash check notices when shared *code* changes. It cannot notice the web app
+gaining a *feature*, because screens are written twice and nothing links them.
+`npm run parity` therefore also checks `scripts/feature-map.mjs`, which gives every
+web page, API route, feature component and layout component one of three statuses:
+
+| Status | Meaning |
+|---|---|
+| `ported` | built here; the entry names the iOS files, which must exist |
+| `deliberate` | intentionally absent or different; the entry says why |
+| `gap` | wanted but not built; the entry says what is missing |
+
+The check fails when:
+
+- a web surface has **no entry** (`UNCLASSIFIED`) — the web app gained something, and
+  someone has to decide about iOS before the check goes green;
+- an entry's web file is gone (`WEB-GONE`) or an iOS file it names does not exist
+  (`IOS-MISSING`);
+- an entry is malformed — a bad status, a missing note, a `ported` entry with no iOS
+  files, or a duplicate.
+
+A `gap` never fails the check. It is listed on every run, so a gap can exist but
+cannot be forgotten.
+
+**When the web app adds a page, route or component:** run `npm run parity`, then
+add the entry. If it is `ported`, build it first; if it is a `gap`, open a ticket for
+it. Scanned: `app/**/page.tsx`, `app/api/**/route.ts`, `components/features/*.tsx`
+and `components/layout/*.tsx`. `components/ui/` holds primitives and is not scanned,
+but an entry may name any web file.
+
 ### Adding a file to the shared set
 
 Add an entry to `scripts/domain-map.mjs` and run `npm run vendor`.
@@ -136,15 +167,33 @@ EUR figure). This is pinned by a test named "never requires callers to read
 
 ---
 
+## Known gaps
+
+Things the web app has that this app does not yet, as opposed to the deliberate
+differences below. `scripts/feature-map.mjs` is the source of truth, and
+`npm run parity` prints them on every run. Close one by building it and changing
+its entry to `ported`.
+
+| Gap | Web |
+|---|---|
+| Hidden-from-totals breakdown (count, income, expense, net) on the month and year summaries. The month card shows only the hidden-expense total; search shows the full footnote. | `components/ui/hidden-transactions-tooltip.tsx` |
+
+Not gaps, because they were decided against: the admin tools, the all-accounts
+"fetch bank transactions" action (per-account "Fetch now" in Settings covers it),
+and the web app's scroll-to-top button.
+
 ## Deliberate differences
 
 These are intentional and are not drift.
 
 ### Screens not ported
 
-The web app's `/protected/admin` page is absent: no CSV import, no fund-category
-CRUD, no data management, no exchange-rate retry, no delete-all. These are
-desktop-shaped, rarely-used, and one-off setup tasks.
+The web app's `/protected/admin` page is absent, **by decision**: no CSV import, no
+fund-category CRUD, no data management, no exchange-rate retry, no delete-all. They
+are not planned for mobile. They are desktop-shaped, rarely used, and one-off setup
+tasks, and delete-all in particular is not something to put a thumb away from.
+
+The web app's `/` landing page is absent too: this app opens to sign-in or Home.
 
 ### Screens merged
 
@@ -154,11 +203,15 @@ Capability parity is preserved; screen count is not.
 
 ### Refresh model
 
-The web app polls a `(count, last-updated_at)` fingerprint every 15 seconds and
-shows a persistent update banner. This app refreshes on foreground and on
-pull-to-refresh, and surfaces remote changes as a transient toast. Supabase
-Realtime is deliberately unused — the web app removed it for performance, and on
-iOS a backgrounded socket drops silently.
+The web app polls a `(count, last-updated_at)` fingerprint every 15 seconds,
+refetches the visible data in place and shows an update banner. This app does the
+same (`features/sync`): the same fingerprint every 15 seconds while foregrounded,
+a refetch in place, and a banner that dismisses itself after six seconds or on a
+tap, rather than staying until dismissed. Its own writes are ignored via a local
+write counter, the equivalent of the web app's `recordLocalMutation`. It also
+refreshes on foreground and on pull-to-refresh. Supabase Realtime is deliberately
+unused — the web app removed it for performance, and on iOS a backgrounded socket
+drops silently.
 
 ### Privacy mode redacts instead of blurring
 
@@ -257,6 +310,11 @@ The web app's dual-thumb slider is bounded at 10,000 in steps of 100, so it cann
 express "over 12,000" or "under 5". Two numeric fields are exact, quicker than
 dragging on a phone, and accept every value the slider does — a superset rather
 than a divergence.
+
+Both apps compare the range against `eur_amount`, so the euro label is true: a
+¥10,000 purchase is about €60. A EUR row with no `eur_amount` falls back to
+`amount`; a non-EUR row with no conversion is left out, as it cannot be placed in
+the range. (Both used to compare the raw `amount` in the row's own currency.)
 
 ### The filter's currency list is complete, not sampled
 

@@ -27,6 +27,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { Transaction } from '@/domain/types';
 import { convertToEUR, toRateDate } from '@/features/transactions/exchange-rates';
+import { markLocalWrite } from '@/features/sync/remote-changes';
 import { fetchTransaction } from '@/features/transactions/queries';
 import { TX, qk } from '@/lib/query-keys';
 import { requireUserId } from '@/lib/session';
@@ -121,14 +122,23 @@ async function withEurConversion(
  * case is correct immediately and the refetch only confirms it.
  *
  * @param queryClient The client to invalidate against.
+ * @param source `local` for this device's own writes, which are noted so the
+ *   remote-change poller does not mistake them for another device's; `remote`
+ *   when the poller itself is refreshing after a change it detected.
  */
-export function invalidateAfterWrite(queryClient: QueryClient): void {
+export function invalidateAfterWrite(
+  queryClient: QueryClient,
+  source: 'local' | 'remote' = 'local',
+): void {
+  if (source === 'local') markLocalWrite();
+
   // Prefixes, so each covers every period at once.
   const families: readonly (readonly unknown[])[] = [
     [TX, 'month'],
     [TX, 'year'],
     [TX, 'range'],
     [TX, 'anchored'],
+    [TX, 'split-sources'],
     // The single-row cache the edit screen reads. It covers every id at once.
     [TX, 'one'],
     // `staleTime: Infinity` and persisted, so only an invalidation can ever

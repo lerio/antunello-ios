@@ -138,3 +138,19 @@ export function buildFundCondition(funds: FundCondition): string {
   const ids = funds.ids.join(',');
   return `fund_category_id.in.(${ids}),and(is_money_transfer.eq.true,target_fund_category_id.in.(${ids}))`;
 }
+
+/**
+ * The PostgREST `or` expression for one end of the amount range.
+ *
+ * The range is in euros, as the filter's label says: a ¥10,000 purchase is about
+ * €60 and must not match "over 100". It compares `eur_amount`, falling back to
+ * `amount` only for a EUR row that somehow has no `eur_amount`. A non-EUR row
+ * with no conversion cannot be placed in the range, so it is left out rather
+ * than compared in a different currency.
+ *
+ * @param bound `gte` for the minimum, `lte` for the maximum.
+ * @param value The bound, in euros.
+ */
+export function buildAmountCondition(bound: 'gte' | 'lte', value: number): string {
+  return `eur_amount.${bound}.${value},and(eur_amount.is.null,currency.eq.EUR,amount.${bound}.${value})`;
+}

@@ -8,7 +8,7 @@
  * number anyone re-derives by hand.
  */
 
-import { MAIN_CATEGORIES } from '@/domain/types';
+import { MAIN_CATEGORIES, getCategoryType } from '@/domain/types';
 import type { Budget, Transaction } from '@/domain/types';
 
 /** How a budget's progress reads at a glance. */
@@ -104,10 +104,15 @@ export function budgetProgress(budget: Budget, spent: number): BudgetProgress {
 /**
  * The categories a new budget may be set for.
  *
+ * Only expense categories: spending is summed from expenses and excludes
+ * transfers, so a budget on an income category or on "Money Transfer" could never
+ * show anything but €0.
+ *
  * One budget per category — a second would silently shadow the first, since the
  * page looks spending up by category. The category being edited stays in the
  * list so an existing budget can be re-saved, and so its own name is not the one
- * thing missing from its own picker.
+ * thing missing from its own picker — even if it predates this rule and is an
+ * income category.
  *
  * @param existingCategories Categories that already have a budget.
  * @param currentCategory The category being edited, if any.
@@ -119,6 +124,9 @@ export function selectableBudgetCategories(
 ): string[] {
   return MAIN_CATEGORIES.filter(
     (category) =>
-      !existingCategories.includes(category) || category === currentCategory,
+      category === currentCategory ||
+      (getCategoryType(category) === 'expense' &&
+        category !== 'Money Transfer' &&
+        !existingCategories.includes(category)),
   ).sort();
 }

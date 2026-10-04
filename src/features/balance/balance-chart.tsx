@@ -128,6 +128,11 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
             <PrivacyValue style={styles.tooltipValue}>
               {formatCurrency(pressed.balance, 'EUR')}
             </PrivacyValue>
+            {pressed.income > 0 ? (
+              <PrivacyValue style={[styles.tooltipIncome, { color: theme.income }]}>
+                {`Income +${formatCurrency(pressed.income, 'EUR')}`}
+              </PrivacyValue>
+            ) : null}
             {pressed.splitAdjustedBalance !== null ? (
               // One string, not two adjacent expressions: `PrivacyValue`
               // takes a single child, and the figure and unit would otherwise
@@ -305,6 +310,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 26,
+    fontVariant: ['tabular-nums'],
+  },
+  tooltipIncome: {
+    fontSize: 12,
     fontVariant: ['tabular-nums'],
   },
   tooltipSplit: {

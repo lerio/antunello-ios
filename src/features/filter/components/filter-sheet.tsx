@@ -353,7 +353,7 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
               />
             </View>
             <ThemedText themeColor="textSecondary" style={styles.hint}>
-              In the transaction&apos;s own currency, not converted.
+              In euros. Other currencies are compared at their converted amount.
             </ThemedText>
           </Section>
         </ScrollView>

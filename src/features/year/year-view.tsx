@@ -13,6 +13,7 @@ import {
   findYearIndex,
   useAvailableYears,
 } from '@/features/year/use-available-years';
+import { usePrefetchAdjacentYears } from '@/features/transactions/use-adjacent-prefetch';
 import { useYearTransactions } from '@/features/year/use-year-transactions';
 import {
   formatMonthRange,
@@ -40,6 +41,7 @@ export function YearView({ year, onSelectYear }: YearViewProps) {
   const years = useAvailableYears();
   const { totals, previousTotals, lastCompleteMonthIndex, monthsCovered, isLoading, isError, refresh } =
     useYearTransactions(year);
+  usePrefetchAdjacentYears(year, !isLoading && !isError);
 
   const selectedIndex = findYearIndex(years, year);
   const balance = totals.incomeTotal - totals.expenseTotal;

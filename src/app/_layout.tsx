@@ -2,14 +2,20 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
+import { applyThemePreference, readThemePreference } from '@/features/appearance/appearance';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
+import { RemoteChangeBanner } from '@/features/sync/remote-change-banner';
 import { persistOptions, queryClient } from '@/lib/query-client';
 import { runRuntimeChecks } from '@/lib/runtime-check';
 
 SplashScreen.preventAutoHideAsync();
+
+// Before the first render, so a forced light or dark theme never flashes the
+// system one. The read is synchronous and cannot throw.
+applyThemePreference(readThemePreference());
 
 /**
  * Root layout.
@@ -29,7 +35,12 @@ export default function RootLayout() {
             sign-out rather than being tied to the session. */}
         <PrivacyProvider>
           <AuthProvider>
-            <RootNavigator />
+            <View style={styles.root}>
+              <RootNavigator />
+              {/* Over the whole app, since another device's change can arrive
+                  on any screen. Renders nothing while signed out. */}
+              <RemoteChangeBanner />
+            </View>
           </AuthProvider>
         </PrivacyProvider>
       </ThemeProvider>
@@ -102,6 +113,10 @@ function RootNavigator() {
           options={{ headerShown: true, presentation: 'modal', title: 'Budget' }}
         />
         <Stack.Screen
+          name="change-password"
+          options={{ headerShown: true, presentation: 'modal', title: 'Change Password' }}
+        />
+        <Stack.Screen
           name="pending"
           options={{ headerShown: true, presentation: 'modal', title: 'Review' }}
         />
@@ -131,6 +146,9 @@ function StartupFailure({ error }: { error: Error }) {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   failure: {
     flexGrow: 1,
     justifyContent: 'center',
