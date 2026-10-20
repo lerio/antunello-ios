@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/money-transfer-validation.ts
- * @upstream-sha256 a332fd9294f5e56c82794dccb7e3a680d206e854779e1edec06df0c0fb236b74
- * @vendored-on 2026-09-11
+ * @upstream-sha256 5c2bbf91df54143efab30ffa12b5b83a609f8f83df6d1117f7d4caa850e68119
+ * @vendored-on 2026-10-19
  * @parity exact
  * @divergences none
  *
@@ -23,38 +23,6 @@
  */
 
 import { Transaction } from './types'
-
-/**
- * Validates a money transfer transaction.
- * Checks that source and target fund categories are present, different from
- * each other, and the amount is positive.
- *
- * @param data - Partial transaction data to validate, expected to contain
- *               fund_category_id, target_fund_category_id, and amount
- * @returns An array of error message strings; empty array if valid
- */
-export function validateMoneyTransfer(data: Partial<Transaction>): string[] {
-  const errors: string[] = []
-
-  if (!data.fund_category_id) {
-    errors.push('Source fund is required')
-  }
-
-  if (!data.target_fund_category_id) {
-    errors.push('Target fund is required')
-  }
-
-  if (data.fund_category_id && data.target_fund_category_id &&
-      data.fund_category_id === data.target_fund_category_id) {
-    errors.push('Source and target funds must be different')
-  }
-
-  if (!data.amount || data.amount <= 0) {
-    errors.push('Amount must be greater than 0')
-  }
-
-  return errors
-}
 
 /**
  * Generates a formatted title for a money transfer.

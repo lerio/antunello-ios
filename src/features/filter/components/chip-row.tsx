@@ -52,7 +52,7 @@ export function ChipRow({ options, selected, onToggle, accessibilityLabel }: Chi
             <ThemedText
               style={[
                 styles.label,
-                { color: isSelected ? '#ffffff' : theme.text },
+                { color: isSelected ? theme.onTint : theme.text },
               ]}>
               {option.label}
             </ThemedText>

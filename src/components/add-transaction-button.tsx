@@ -30,7 +30,7 @@ export function AddTransactionButton({ onPress }: { onPress: () => void }) {
           opacity: pressed ? 0.85 : 1,
         },
       ]}>
-      <SymbolView name="plus" size={24} tintColor="#ffffff" />
+      <SymbolView name="plus" size={24} tintColor={theme.onTint} />
     </Pressable>
   );
 }

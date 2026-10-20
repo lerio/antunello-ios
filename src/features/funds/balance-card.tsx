@@ -25,19 +25,26 @@ import { messageOf } from '@/lib/errors';
  * The total is always covered by privacy mode: it is the single most sensitive
  * number on the screen.
  */
-export function BalanceCard() {
+export function BalanceCard({ embedded = false }: { embedded?: boolean }) {
   const theme = useTheme();
   const { data, isLoading, error } = useFundBalances();
   const [expanded, setExpanded] = useState(false);
 
-  const groups = useMemo(() => groupByTopLevel(data?.funds ?? []), [data]);
+  // Inactive funds stay in the total — their money still exists — but leave the
+  // list, matching the web app.
+  const groups = useMemo(
+    () => groupByTopLevel((data?.funds ?? []).filter((fund) => fund.is_active)),
+    [data],
+  );
 
   if (error) {
     return (
-      <View style={[styles.card, { backgroundColor: theme.card }]}>
-        <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
-          BALANCE
-        </ThemedText>
+      <View style={embedded ? styles.embedded : [styles.card, { backgroundColor: theme.card }]}>
+        {embedded ? null : (
+          <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
+            BALANCE
+          </ThemedText>
+        )}
         <ThemedText themeColor="destructive" style={styles.errorText}>
           {messageOf(error)}
         </ThemedText>
@@ -46,34 +53,36 @@ export function BalanceCard() {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card }]}>
-      <Pressable
-        onPress={() => setExpanded((value) => !value)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        accessibilityLabel="Balance"
-        style={({ pressed }) => [styles.header, { opacity: pressed ? 0.7 : 1 }]}>
-        <View style={styles.headerLeft}>
-          <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
-            BALANCE
-          </ThemedText>
-          {isLoading ? (
-            <ActivityIndicator size="small" />
-          ) : (
-            <PrivacyValue style={styles.total}>
-              {formatCurrency(data?.totalEUR ?? 0, 'EUR')}
-            </PrivacyValue>
-          )}
-        </View>
+    <View style={embedded ? styles.embedded : [styles.card, { backgroundColor: theme.card }]}>
+      {embedded ? null : (
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel="Balance"
+          style={({ pressed }) => [styles.header, { opacity: pressed ? 0.7 : 1 }]}>
+          <View style={styles.headerLeft}>
+            <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
+              BALANCE
+            </ThemedText>
+            {isLoading ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <PrivacyValue style={styles.total}>
+                {formatCurrency(data?.totalEUR ?? 0, 'EUR')}
+              </PrivacyValue>
+            )}
+          </View>
 
-        <SymbolView
-          name={expanded ? 'chevron.up' : 'chevron.down'}
-          size={13}
-          tintColor={theme.textSecondary}
-        />
-      </Pressable>
+          <SymbolView
+            name={expanded ? 'chevron.up' : 'chevron.down'}
+            size={13}
+            tintColor={theme.textSecondary}
+          />
+        </Pressable>
+      )}
 
-      {expanded
+      {embedded || expanded
         ? groups.map((group) => <GroupRow key={group.name} group={group} />)
         : null}
     </View>
@@ -172,6 +181,11 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.medium,
     paddingVertical: Spacing.two,
+  },
+  embedded: {
+    // Inside the Net worth card: no chrome, and the groups carry their own
+    // horizontal padding.
+    paddingTop: Spacing.two,
   },
   header: {
     flexDirection: 'row',

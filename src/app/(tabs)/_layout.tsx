@@ -1,6 +1,7 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { usePendingTransactions } from '@/features/pending/use-pending-transactions';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * The four top-level destinations, mirroring the web app's navigation exactly.
@@ -16,10 +17,11 @@ import { usePendingTransactions } from '@/features/pending/use-pending-transacti
  */
 export default function TabsLayout() {
   const { pending } = usePendingTransactions();
+  const theme = useTheme();
   const count = pending.length;
 
   return (
-    <NativeTabs>
+    <NativeTabs tintColor={theme.tint}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />

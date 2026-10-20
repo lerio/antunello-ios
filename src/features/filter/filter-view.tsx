@@ -96,7 +96,9 @@ export function FilterView() {
           <ThemedText style={styles.filterButtonLabel}>Filters</ThemedText>
           {hasAnyFilter(criteria) ? (
             <View style={[styles.badge, { backgroundColor: theme.tint }]}>
-              <ThemedText style={styles.badgeLabel}>{countActive(criteria)}</ThemedText>
+              <ThemedText style={[styles.badgeLabel, { color: theme.onTint }]}>
+                {countActive(criteria)}
+              </ThemedText>
             </View>
           ) : null}
         </Pressable>
@@ -250,7 +252,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeLabel: {
-    color: '#ffffff',
     fontSize: 11,
     fontWeight: '700',
   },

@@ -16,7 +16,6 @@ import { PickerSheet } from '@/components/picker-sheet';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import { getCurrencySymbol } from '@/domain/app-constants';
 import type { Budget } from '@/domain/types';
 import { selectableBudgetCategories } from '@/features/budgets/budget-progress';
 import { useBudgetMutations, useBudgets } from '@/features/budgets/use-budgets';
@@ -158,7 +157,7 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
                 { backgroundColor: theme.card, borderColor: theme.separator },
               ]}>
               <ThemedText themeColor="textSecondary" style={styles.currency}>
-                {getCurrencySymbol('EUR')}
+                {'€'}
               </ThemedText>
               <TextInput
                 value={amount}
@@ -222,9 +221,9 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
                 },
               ]}>
               {isBusy ? (
-                <ActivityIndicator color="#ffffff" />
+                <ActivityIndicator color={theme.onTint} />
               ) : (
-                <ThemedText style={[styles.buttonLabel, styles.primaryLabel]}>
+                <ThemedText style={[styles.buttonLabel, { color: theme.onTint }]}>
                   {isEdit ? 'Save' : 'Create'}
                 </ThemedText>
               )}
@@ -307,8 +306,5 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: 17,
     fontWeight: '600',
-  },
-  primaryLabel: {
-    color: '#ffffff',
   },
 });

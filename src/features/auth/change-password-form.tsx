@@ -122,9 +122,11 @@ export function ChangePasswordForm() {
               { backgroundColor: theme.tint, opacity: !canSubmit ? 0.4 : pressed ? 0.8 : 1 },
             ]}>
             {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={theme.onTint} />
             ) : (
-              <ThemedText style={styles.buttonLabel}>Update password</ThemedText>
+              <ThemedText style={[styles.buttonLabel, { color: theme.onTint }]}>
+                Update password
+              </ThemedText>
             )}
           </Pressable>
         </ScrollView>
@@ -156,7 +158,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   buttonLabel: {
-    color: '#ffffff',
     fontWeight: '600',
   },
 });

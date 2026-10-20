@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -33,9 +34,7 @@ export function BudgetsView() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Budgets</ThemedText>
-      </View>
+      <ScreenHeader title="Budgets" />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -166,18 +165,6 @@ function ProgressBar({
 
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
   content: {
     flexGrow: 1,
     paddingHorizontal: Spacing.three,

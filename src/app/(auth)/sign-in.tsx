@@ -111,9 +111,11 @@ export default function SignInScreen() {
               { backgroundColor: theme.tint, opacity: !canSubmit ? 0.4 : pressed ? 0.8 : 1 },
             ]}>
             {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={theme.onTint} />
             ) : (
-              <ThemedText style={styles.buttonLabel}>Sign in</ThemedText>
+              <ThemedText style={[styles.buttonLabel, { color: theme.onTint }]}>
+                Sign in
+              </ThemedText>
             )}
           </Pressable>
         </ScrollView>
@@ -153,7 +155,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
   },
   buttonLabel: {
-    color: '#ffffff',
     fontWeight: '600',
   },
 });

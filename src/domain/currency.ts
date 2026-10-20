@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/currency.ts
- * @upstream-sha256 63fdf84c4dedc32298bda5eb7cbb34f38a709817cad8efbc0209263b347bef0f
- * @vendored-on 2026-09-11
+ * @upstream-sha256 8806e3ca12f04f2527542cb4fa56da61b390e0d5b1b439075ef2aacaf59603f9
+ * @vendored-on 2026-10-20
  * @parity exact
  * @divergences none
  *
@@ -28,15 +28,17 @@ type CurrencyConfig = {
 }
 
 const CURRENCY_FORMATS: Record<string, CurrencyConfig> = {
-  EUR: { locale: 'it-IT', currency: 'EUR' },
+  // German rather than Italian CLDR data: both render `1.234,56 €`, but Italian
+  // sets minimumGroupingDigits=2 and leaves 5448,96 ungrouped. German groups it.
+  EUR: { locale: 'de-DE', currency: 'EUR' },
   USD: { locale: 'en-US', currency: 'USD' },
   JPY: { locale: 'ja-JP', currency: 'JPY' },
 }
 
 /**
  * Formats a numeric amount into a locale-aware currency string.
- * Uses currency-specific locales (e.g., EUR uses Italian formatting with "." as
- * thousands separator and "," for decimals). JPY is formatted with 0 decimal places;
+ * Uses currency-specific locales (e.g., EUR uses "." as thousands separator and
+ * "," for decimals). JPY is formatted with 0 decimal places;
  * all other currencies use 2 decimal places.
  *
  * @param amount - The numeric amount to format

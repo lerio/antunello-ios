@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/number.ts
- * @upstream-sha256 cf6a206f33d4c27e70651beb161a975c6912d53c928a2c493a56df6edc38dc12
- * @vendored-on 2026-09-11
+ * @upstream-sha256 5aacc083a450286284f9c64ae4c26966defad8b7b4e10cc325ffa9b46d4dcd69
+ * @vendored-on 2026-10-19
  * @parity exact
  * @divergences none
  *
@@ -30,7 +30,7 @@
  * @param value - The input string to normalize (e.g. "1,50" or "1.50")
  * @returns The normalized string with commas replaced by dots (e.g. "1.50")
  */
-export function normalizeDecimalSeparator(value: string): string {
+function normalizeDecimalSeparator(value: string): string {
   return value.replace(/,/g, '.');
 }
 

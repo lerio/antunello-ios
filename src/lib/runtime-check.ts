@@ -69,9 +69,9 @@ export function assertIntlSupport(): void {
 /**
  * Asserts that currency formatting behaves as the app expects.
  *
- * `formatCurrency` renders EUR in Italian locale (`1234,56 €`), matching the web
- * app rather than letting the platform pick. That makes the output depend on the
- * engine's ICU data, which differs between V8 and Hermes.
+ * `formatCurrency` renders EUR in German CLDR data (`5.448,96 €`), matching the
+ * web app rather than letting the platform pick. That makes the output depend on
+ * the engine's ICU data, which differs between V8 and Hermes.
  *
  * The assertions deliberately test *properties* — which separator is used, how
  * many decimals survive — rather than exact strings. Exact matches would fail on
@@ -84,14 +84,17 @@ export function assertIntlSupport(): void {
 export function assertCurrencyFormatting(): void {
   const problems: string[] = [];
 
-  // Amounts under 1000 are chosen deliberately: Italian CLDR sets
-  // `minimumGroupingDigits: 2`, so grouping only appears at five integer digits
-  // or more. Staying below that keeps the decimal separator unambiguous —
-  // "1.234,50" contains a dot, but as a grouping separator, not a decimal one.
-
+  // Small amounts keep the decimal separator unambiguous. The four-digit check
+  // below is the regression guard for CLDR's minimumGroupingDigits: Italian
+  // leaves 5448,96 ungrouped, which is why EUR uses German data.
   const eur = formatCurrency(0.5, 'EUR');
   if (!eur.includes(',50')) {
     problems.push(`EUR decimal separator should be ",": got "${eur}"`);
+  }
+
+  const grouped = formatCurrency(5448.96, 'EUR');
+  if (!grouped.includes('5.448,96')) {
+    problems.push(`EUR should group four-digit amounts: got "${grouped}"`);
   }
 
   const usd = formatCurrency(0.5, 'USD');

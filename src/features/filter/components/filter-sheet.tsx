@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PickerList, type PickerListProps, type PickerOption } from '@/components/picker-list';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import { getCurrencySymbol } from '@/domain/app-constants';
 import {
   filterReducer,
   hasAnyFilter,
@@ -478,7 +477,7 @@ function AmountField({
   return (
     <View style={[styles.amountField, { backgroundColor: theme.card, borderColor: theme.separator }]}>
       <ThemedText themeColor="textSecondary" style={styles.currencyPrefix}>
-        {getCurrencySymbol('EUR')}
+        {'€'}
       </ThemedText>
       <TextInput
         value={text}

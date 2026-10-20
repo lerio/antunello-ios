@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/transaction-utils.ts
- * @upstream-sha256 9431ae44b07b52b606e5cbe492b6288684fe44a57e715ff164a3aacb9c78e359
- * @vendored-on 2026-09-11
+ * @upstream-sha256 933b1975c270274dde7de6227d00e84da9c746ca2bc0684300a2aca775b03046
+ * @vendored-on 2026-10-19
  * @parity exact
  * @divergences none
  *
@@ -25,21 +25,6 @@
  */
 
 import { Transaction } from "./types";
-
-/**
- * Sorts transactions by date (descending), then by created_at (descending).
- * Returns a new sorted array without mutating the original.
- *
- * @param transactions - The array of transactions to sort
- * @returns A new array sorted by date descending, then created_at descending
- */
-export function sortTransactionsByDate(transactions: Transaction[]): Transaction[] {
-  return [...transactions].sort((a, b) => {
-    const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-    if (dateCompare !== 0) return dateCompare;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-}
 
 /**
  * Sorts transactions in place by date (descending), then by created_at (descending).

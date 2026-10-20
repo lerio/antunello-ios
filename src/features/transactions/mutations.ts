@@ -136,9 +136,11 @@ export function invalidateAfterWrite(
   const families: readonly (readonly unknown[])[] = [
     [TX, 'month'],
     [TX, 'year'],
-    [TX, 'range'],
     [TX, 'anchored'],
     [TX, 'split-sources'],
+    // Home's server-computed figures move with every write too.
+    qk.monthPace(),
+    qk.monthMovers(),
     // The single-row cache the edit screen reads. It covers every id at once.
     [TX, 'one'],
     // `staleTime: Infinity` and persisted, so only an invalidation can ever

@@ -22,7 +22,10 @@ export const Colors = {
     backgroundSelected: '#E0E1E6',
     card: '#FFFFFF',
     separator: '#E5E5EA',
-    tint: '#007AFF',
+    /** Accent: black in light, white in dark — never system blue. */
+    tint: '#000000',
+    /** Text and icons drawn on top of `tint`. */
+    onTint: '#FFFFFF',
 
     /** Money in. */
     income: '#248A3D',
@@ -43,7 +46,8 @@ export const Colors = {
     backgroundSelected: '#2E3135',
     card: '#1C1C1E',
     separator: '#38383A',
-    tint: '#0A84FF',
+    tint: '#FFFFFF',
+    onTint: '#000000',
 
     income: '#30D158',
     expense: '#FF453A',

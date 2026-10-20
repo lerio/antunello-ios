@@ -38,8 +38,12 @@ export function RemoteChangeBanner() {
       accessibilityRole="alert"
       accessibilityHint="Dismiss"
       style={[styles.banner, { top: insets.top + Spacing.one, backgroundColor: theme.tint }]}>
-      <SymbolView name="arrow.triangle.2.circlepath" size={14} tintColor="#FFFFFF" />
-      <ThemedText style={styles.text}>{message}</ThemedText>
+      <SymbolView
+        name="arrow.triangle.2.circlepath"
+        size={14}
+        tintColor={theme.onTint}
+      />
+      <ThemedText style={[styles.text, { color: theme.onTint }]}>{message}</ThemedText>
     </Pressable>
   );
 }
@@ -59,7 +63,6 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },

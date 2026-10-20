@@ -1,37 +1,38 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '@/components/screen';
-import { Spacing } from '@/constants/theme';
-import { BalanceChart } from '@/features/balance/balance-chart';
-import { DashboardSummary } from '@/features/dashboard/dashboard-summary';
-import { BalanceCard } from '@/features/funds/balance-card';
-import { useFundBalances } from '@/features/funds/use-fund-balances';
+import { ScreenHeader } from '@/components/screen-header';
+import { BottomTabInset, Spacing } from '@/constants/theme';
+import { AtAGlanceCard } from '@/features/home/at-a-glance-card';
+import { NetWorthCard } from '@/features/home/net-worth-card';
 import { TX, qk } from '@/lib/query-keys';
 
 /**
  * Home.
  *
- * The chart is anchored to the Balance card's total, so it waits for that total
- * rather than drawing against zero — a chart that briefly shows the wrong line
- * is worse than one that appears a moment late.
+ * Two questions and nothing else: is this month on track, and what is
+ * everything worth. The figures come from the same RPCs as the web app, so the
+ * two clients cannot disagree about them.
  */
 export default function HomeScreen() {
-  const { data } = useFundBalances();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Everything on this screen: the balances, the chart's series and the 30-day
-  // comparison. Invalidating returns once the active queries have refetched, so
-  // the spinner stays until the figures are actually new.
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await Promise.all(
-        [qk.fundBalances(), [TX, 'anchored'], [TX, 'range']].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
-        ),
+        [
+          qk.fundBalances(),
+          qk.monthPace(),
+          qk.monthMovers(),
+          // Every chart range at once, rather than the one on screen.
+          [TX, 'anchored'],
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       );
     } finally {
       setRefreshing(false);
@@ -40,23 +41,34 @@ export default function HomeScreen() {
 
   return (
     <Screen>
+      <ScreenHeader title="Home" subtitle={todayLabel()} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: BottomTabInset + insets.bottom + Spacing.three },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-        <BalanceCard />
-        {data ? <BalanceChart anchor={data.totalEUR} /> : <View style={styles.chartPlaceholder} />}
-        <DashboardSummary />
+        <NetWorthCard />
+        <AtAGlanceCard />
       </ScrollView>
     </Screen>
   );
+}
+
+/** `Tuesday, 20 October` — context for the two cards below. */
+function todayLabel(): string {
+  const now = new Date();
+  const weekday = now.toLocaleDateString('en-GB', { weekday: 'long' });
+  const dayMonth = now.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+  });
+  return `${weekday}, ${dayMonth}`;
 }
 
 const styles = StyleSheet.create({
   content: {
     padding: Spacing.three,
     gap: Spacing.three,
-  },
-  chartPlaceholder: {
-    height: 288,
   },
 });

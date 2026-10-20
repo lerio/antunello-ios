@@ -1,19 +1,23 @@
-import { DashPathEffect, Path as SkiaPath, Circle } from '@shopify/react-native-skia';
-import { useMemo, useState } from 'react';
-import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Host, Picker, Text as SwiftText } from '@expo/ui/swift-ui';
+import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import {
-  CartesianChart,
-  Line,
-  useChartPressState,
-  useLinePath,
-  type PointsArray,
-} from 'victory-native';
+  Circle,
+  LinearGradient,
+  matchFont,
+  vec,
+} from '@shopify/react-native-skia';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useMemo, useState } from 'react';
+import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Area, CartesianChart, Line, useChartPressState } from 'victory-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
+import { niceTicks, xTickIndices } from '@/features/balance/chart-ticks';
 import { useBalanceHistory } from '@/features/balance/use-balance-history';
+import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { useTheme } from '@/hooks/use-theme';
 import { messageOf } from '@/lib/errors';
@@ -26,39 +30,64 @@ const RANGES: readonly { value: TimeRange; label: string }[] = [
   { value: 'all', label: 'All' },
 ];
 
+/** Spoken range names; the pills themselves are abbreviated. */
+const RANGE_ACCESSIBILITY: Record<TimeRange, string> = {
+  '1m': 'one month',
+  '1y': 'one year',
+  '5y': 'five years',
+  all: 'all time',
+};
+
 const CHART_HEIGHT = 220;
 
 type BalanceChartProps = {
   /** The Balance card's total. The series' last point is set to it. */
   anchor: number;
+  /** Render without the card chrome and title, for use inside another card. */
+  embedded?: boolean;
 };
 
 /**
  * Balance over time, anchored to the Balance card.
  *
  * The last point *is* the card's total rather than an independently computed
- * figure that happens to be near it — see `balance-series.ts`. A dashed overlay
- * shows what the balance would look like if split transactions accrued monthly
- * instead of being booked in full on their source date; it is hidden where it
- * does not differ.
+ * figure that happens to be near it — see `balance-series.ts`. One line, no
+ * overlay: the series is a single running balance.
  */
-export function BalanceChart({ anchor }: BalanceChartProps) {
+export function BalanceChart({ anchor, embedded = false }: BalanceChartProps) {
   const theme = useTheme();
-  const [timeRange, setTimeRange] = useState<TimeRange>('1m');
+  const { enabled: privacyEnabled } = usePrivacy();
+  const [timeRange, setTimeRange] = useState<TimeRange>('1y');
 
   const { points, isLoading, error } = useBalanceHistory(timeRange, anchor);
 
   // victory needs a numeric x; the dates are looked up by index when labelling.
   const data = useMemo(
-    () => points.map((point, index) => ({ x: index, balance: point.balance, adjusted: point.splitAdjustedBalance })),
+    () => points.map((point, index) => ({ x: index, balance: point.balance })),
     [points],
   );
 
-  const hasOverlay = useMemo(() => points.some((p) => p.splitAdjustedBalance !== null), [points]);
+  const xTicks = useMemo(
+    () => xTickIndices(points.map((point) => point.date), timeRange),
+    [points, timeRange],
+  );
+  const yTicks = useMemo(() => {
+    if (points.length === 0) return [];
+    const balances = points.map((point) => point.balance);
+    return niceTicks(Math.min(...balances), Math.max(...balances));
+  }, [points]);
+  const yDomain: [number, number] | undefined =
+    yTicks.length > 1 ? [yTicks[0], yTicks[yTicks.length - 1]] : undefined;
+
+  // Skia needs a real font to draw the axis labels; `font: null` hides them.
+  const axisFont = useMemo(
+    () => matchFont({ fontFamily: 'Helvetica', fontSize: 11 }),
+    [],
+  );
 
   const { state } = useChartPressState({
     x: 0,
-    y: { balance: 0, adjusted: 0 },
+    y: { balance: 0 },
   });
 
   /**
@@ -75,48 +104,65 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
    */
   const [pressedIndex, setPressedIndex] = useState<number | null>(null);
 
+  const handlePressedIndex = useCallback((index: number) => {
+    setPressedIndex(index >= 0 ? index : null);
+    if (index >= 0) {
+      // One tick per point, the same feedback as a picker wheel. Haptics are
+      // decoration, so a device that cannot play them must not break scrubbing.
+      Haptics.selectionAsync().catch(() => {});
+    }
+  }, []);
+
   useAnimatedReaction(
     () => (state.isActive.value ? state.matchedIndex.value : -1),
     (index, previous) => {
       if (index === previous) return;
-      runOnJS(setPressedIndex)(index >= 0 ? index : null);
+      runOnJS(handlePressedIndex)(index);
     },
   );
 
   const pressed =
     pressedIndex !== null && pressedIndex < points.length ? points[pressedIndex] : null;
 
-  return (
-    <View style={[styles.card, { backgroundColor: theme.card }]}>
-      <View style={styles.header}>
-        <ThemedText themeColor="textSecondary" style={styles.label}>
-          BALANCE HISTORY
-        </ThemedText>
+  const chartAccessibilityLabel = privacyEnabled
+    ? 'Chart hidden'
+    : error
+      ? `Could not load the chart. ${messageOf(error)}`
+      : points.length === 0
+        ? 'No history yet'
+        : `Net worth chart, ${RANGE_ACCESSIBILITY[timeRange]}. Latest ${formatCurrency(
+            points[points.length - 1].balance,
+            'EUR',
+          )}`;
 
-        <View style={styles.ranges}>
-          {RANGES.map((range) => {
-            const selected = range.value === timeRange;
-            return (
-              <Pressable
-                key={range.value}
-                onPress={() => setTimeRange(range.value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                style={[
-                  styles.rangeChip,
-                  { backgroundColor: selected ? theme.backgroundSelected : 'transparent' },
-                ]}>
-                <ThemedText
-                  style={[styles.rangeLabel, { color: selected ? theme.text : theme.textSecondary }]}>
-                  {range.label}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
-        </View>
+  return (
+    <View style={embedded ? styles.embedded : [styles.card, { backgroundColor: theme.card }]}>
+      <View style={styles.header}>
+        {embedded ? null : (
+          <ThemedText themeColor="textSecondary" style={styles.label}>
+            BALANCE HISTORY
+          </ThemedText>
+        )}
+
+        <Host style={styles.rangeHost} seedColor={theme.tint}>
+          <Picker
+            label="Chart range"
+            selection={timeRange}
+            onSelectionChange={(value) => setTimeRange(value)}
+            modifiers={[pickerStyle('segmented')]}>
+            {RANGES.map((range) => (
+              <SwiftText key={range.value} modifiers={[tag(range.value)]}>
+                {range.label}
+              </SwiftText>
+            ))}
+          </Picker>
+        </Host>
       </View>
 
-      <View style={styles.chart}>
+      <View
+        style={styles.chart}
+        accessible
+        accessibilityLabel={chartAccessibilityLabel}>
         {/* Positioned over the chart rather than above it. As a block in the
             flow it pushed everything down the moment a finger landed, which is
             the one thing a tooltip must not do. */}
@@ -128,19 +174,6 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
             <PrivacyValue style={styles.tooltipValue}>
               {formatCurrency(pressed.balance, 'EUR')}
             </PrivacyValue>
-            {pressed.income > 0 ? (
-              <PrivacyValue style={[styles.tooltipIncome, { color: theme.income }]}>
-                {`Income +${formatCurrency(pressed.income, 'EUR')}`}
-              </PrivacyValue>
-            ) : null}
-            {pressed.splitAdjustedBalance !== null ? (
-              // One string, not two adjacent expressions: `PrivacyValue`
-              // takes a single child, and the figure and unit would otherwise
-              // arrive as an array it cannot redact coherently.
-              <PrivacyValue themeColor="textSecondary" style={styles.tooltipSplit}>
-                {`⑂ ${formatCurrency(pressed.splitAdjustedBalance, 'EUR')}`}
-              </PrivacyValue>
-            ) : null}
           </View>
         ) : null}
 
@@ -154,66 +187,75 @@ export function BalanceChart({ anchor }: BalanceChartProps) {
           <ThemedText themeColor="textSecondary" style={styles.errorText}>
             No history yet
           </ThemedText>
+        ) : privacyEnabled ? (
+          // React Native's `filter: blur` does nothing on iOS, so the chart is
+          // replaced by a same-height block. Hiding it outright would reflow
+          // the card; a blank block keeps the layout and reveals nothing.
+          <View
+            style={[
+              styles.chart,
+              styles.hiddenChart,
+              { backgroundColor: theme.backgroundElement },
+            ]}
+          />
         ) : (
           <CartesianChart
             data={data}
             xKey="x"
-            yKeys={['balance', 'adjusted']}
+            yKeys={['balance']}
             chartPressState={state}
+            domain={yDomain ? { y: yDomain } : undefined}
+            padding={{ top: 8, right: 8, bottom: 24, left: 40 }}
             domainPadding={{ top: 12, bottom: 12 }}
             axisOptions={{
-              font: null,
-              tickCount: { x: 4, y: 4 },
-              lineColor: theme.separator,
+              font: axisFont,
+              tickValues: { x: xTicks, y: yTicks },
+              lineColor: { grid: { x: 'transparent', y: theme.separator }, frame: 'transparent' },
+              lineWidth: { grid: { x: 0, y: 1 }, frame: 0 },
               labelColor: theme.textSecondary,
               formatYLabel: formatAxisAmount,
               formatXLabel: (value) =>
                 formatAxisDate(points[value ?? 0]?.date, timeRange),
             }}>
-            {({ points: chartPoints }) => (
+            {({ points: chartPoints, chartBounds }) => (
               <>
+                <Area
+                  points={chartPoints.balance}
+                  y0={chartBounds.bottom}
+                  curveType="monotoneX">
+                  <LinearGradient
+                    start={vec(0, chartBounds.top)}
+                    end={vec(0, chartBounds.bottom)}
+                    colors={[`${theme.tint}14`, `${theme.tint}00`]}
+                  />
+                </Area>
                 <Line
                   points={chartPoints.balance}
                   color={theme.tint}
                   strokeWidth={2}
                   curveType="monotoneX"
                 />
-                {hasOverlay ? (
-                  <DashedSeries points={chartPoints.adjusted} color={theme.textSecondary} />
-                ) : null}
-
-                {pressedIndex !== null ? (
+                {pressedIndex === null ? (
+                  <Circle
+                    cx={chartPoints.balance[chartPoints.balance.length - 1]?.x ?? 0}
+                    cy={chartPoints.balance[chartPoints.balance.length - 1]?.y ?? 0}
+                    r={4}
+                    color={theme.tint}
+                  />
+                ) : (
                   <Circle
                     cx={chartPoints.balance[pressedIndex]?.x ?? 0}
                     cy={chartPoints.balance[pressedIndex]?.y ?? 0}
                     r={4}
                     color={theme.tint}
                   />
-                ) : null}
+                )}
               </>
             )}
           </CartesianChart>
         )}
       </View>
     </View>
-  );
-}
-
-/**
- * The dotted split-adjusted overlay.
- *
- * Drawn as a Skia path rather than with `<Line>`, because victory's `Line` only
- * exposes a subset of Skia's path props and `strokeDasharray` is not among them.
- * The path is computed by victory's own `useLinePath`, so the dashes follow the
- * same curve as the solid line.
- */
-function DashedSeries({ points, color }: { points: PointsArray; color: string }) {
-  const { path } = useLinePath(points, { curveType: 'monotoneX' });
-
-  return (
-    <SkiaPath path={path} style="stroke" strokeWidth={2} color={color}>
-      <DashPathEffect intervals={[5, 4]} />
-    </SkiaPath>
   );
 }
 
@@ -250,7 +292,7 @@ function formatAxisDate(isoDate: string | undefined, timeRange: TimeRange): stri
   if (timeRange === '1y') {
     return date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
   }
-  return date.toLocaleDateString('en-GB', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  return date.toLocaleDateString('en-GB', { year: 'numeric', timeZone: 'UTC' });
 }
 
 /** The tooltip's heading, which shows the full date since the axis does not. */
@@ -265,8 +307,12 @@ function formatTooltipDate(isoDate: string): string {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.medium,
+    borderRadius: Radius.large,
     paddingVertical: Spacing.three,
+    gap: Spacing.two,
+  },
+  embedded: {
+    paddingTop: Spacing.two,
     gap: Spacing.two,
   },
   header: {
@@ -279,18 +325,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  ranges: {
-    flexDirection: 'row',
-    gap: Spacing.half,
-  },
-  rangeChip: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
-    borderRadius: Radius.small,
-  },
-  rangeLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+  rangeHost: {
+    flex: 1,
+    height: 34,
   },
   tooltip: {
     // Absolute, so it floats over the plot instead of entering the layout.
@@ -312,17 +349,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontVariant: ['tabular-nums'],
   },
-  tooltipIncome: {
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-  },
-  tooltipSplit: {
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-  },
   chart: {
     height: CHART_HEIGHT,
     justifyContent: 'center',
+  },
+  hiddenChart: {
+    marginHorizontal: Spacing.three,
+    borderRadius: Radius.small,
   },
   errorText: {
     textAlign: 'center',

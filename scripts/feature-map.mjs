@@ -50,7 +50,6 @@ export const FEATURE_MAP = [
   { web: 'app/api/cron/sync/route.ts', status: 'ported', ios: ['src/features/settings/mutations.ts'], note: 'Called per account by "Fetch now".' },
   { web: 'app/api/pending-transactions/[id]/route.ts', status: 'ported', ios: ['src/features/pending/queries.ts'], note: 'Updates the pending row directly, RLS-scoped.' },
   { web: 'app/api/enable-banking/update-mapping/route.ts', status: 'ported', ios: ['src/features/settings/mutations.ts'], note: 'Writes the account settings directly, RLS-scoped.' },
-  { web: 'app/api/overall-totals/route.ts', status: 'deliberate', note: 'The Balance total is built from the get_fund_balances RPC (features/funds/use-fund-balances.ts).' },
   { web: 'app/api/transactions/bulk-fetch/route.ts', status: 'deliberate', note: 'Per-account "Fetch now" in Settings covers it.' },
   { web: 'app/api/enable-banking/auth/route.ts', status: 'deliberate', note: 'Bank connection happens in the browser, on the web app.' },
   { web: 'app/api/enable-banking/callback/route.ts', status: 'deliberate', note: 'Bank connection happens in the browser, on the web app.' },
@@ -60,11 +59,11 @@ export const FEATURE_MAP = [
 
   // --- Feature components ------------------------------------------------
   { web: 'components/features/balance.tsx', status: 'ported', ios: ['src/features/funds/balance-card.tsx'] },
-  { web: 'components/features/balance-chart.tsx', status: 'ported', ios: ['src/features/balance/balance-chart.tsx'] },
+  { web: 'components/features/at-a-glance-card.tsx', status: 'ported', ios: ['src/features/home/at-a-glance-card.tsx'] },
+  { web: 'components/features/net-worth-card.tsx', status: 'ported', ios: ['src/features/home/net-worth-card.tsx', 'src/features/balance/balance-chart.tsx'] },
   { web: 'components/features/budget-card.tsx', status: 'ported', ios: ['src/features/budgets/budgets-view.tsx'] },
   { web: 'components/features/budget-form.tsx', status: 'ported', ios: ['src/features/budgets/budget-form.tsx'] },
   { web: 'components/features/category-chart.tsx', status: 'ported', ios: ['src/features/category/category-chart.tsx'] },
-  { web: 'components/features/dashboard-summary.tsx', status: 'ported', ios: ['src/features/dashboard/dashboard-summary.tsx'] },
   { web: 'components/features/filter-controls.tsx', status: 'ported', ios: ['src/features/filter/components/filter-sheet.tsx'] },
   { web: 'components/features/no-transactions.tsx', status: 'ported', ios: ['src/components/empty-state.tsx'] },
   { web: 'components/features/pending-transactions-button.tsx', status: 'ported', ios: ['src/features/pending/components/pending-banner.tsx'], note: 'A tab badge and a banner replace the floating bell.' },

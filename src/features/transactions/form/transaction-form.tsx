@@ -437,9 +437,9 @@ export function TransactionForm({
             { backgroundColor: theme.tint, opacity: isSaving ? 0.5 : pressed ? 0.8 : 1 },
           ]}>
           {isSaving ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={theme.onTint} />
           ) : (
-            <ThemedText style={styles.saveLabel}>
+            <ThemedText style={[styles.saveLabel, { color: theme.onTint }]}>
               {submitLabel ?? (transactionId ? 'Save changes' : 'Add transaction')}
             </ThemedText>
           )}
@@ -861,7 +861,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   saveLabel: {
-    color: '#ffffff',
     fontWeight: '600',
   },
   deleteButton: {

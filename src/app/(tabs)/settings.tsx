@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { ThemePreferencePicker } from '@/features/appearance/theme-preference-picker';
@@ -41,6 +42,8 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
+      <ScreenHeader title="Settings" />
+
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
           BANKS

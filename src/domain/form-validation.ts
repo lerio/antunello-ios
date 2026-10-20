@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/form-validation.ts
  * @upstream-sha256 ac8653bd456d2e5739f0f5fed496f8757186ef90e70b960601c7f9637200ea00
- * @vendored-on 2026-09-11
+ * @vendored-on 2026-10-19
  * @parity exact
  * @divergences none
  *

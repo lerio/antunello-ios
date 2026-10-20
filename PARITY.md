@@ -272,12 +272,33 @@ blocks the save — loud, and recoverable by picking a fund. The web app would
 allow the save, keeping the old id; this is a deliberate divergence in favour of
 failing visibly.
 
+### Home
+
+Both clients render the same two blocks, from the same RPCs:
+
+- **At a glance** — spent this month, the percentage against a typical month at
+  the same point, the categories driving the gap, the previous-month comparison
+  and the last 30 complete days. `get_month_pace` and `get_month_movers`.
+- **Net worth** — the fund total, its change this month, the oldest bank
+  connection's sync date, and the anchored trend. `get_net_worth_series` plus
+  `get_fund_balances`.
+
+The baseline arithmetic lives in SQL so the two apps cannot disagree: the level
+is the average of the last three complete months and the same three calendar
+months a year earlier, scaled by the median intra-month shape. Both clients send
+the device's IANA timezone so month boundaries follow local time, not UTC.
+
+The balance instead of the whole screen is deliberate: the old iOS dashboard
+(comparison tables, split-adjusted overlay) was replaced wholesale, matching the
+web.
+
 ### Charts
 
-Feature parity, not pixel parity. The anchored balance chart keeps its defining
-property — the last point equals the Balance card total by construction — and the
-dotted split-adjusted overlay. Grid lines, exact tick placement and animation
-timing differ.
+Feature parity, not pixel parity. The trend's defining property is kept — the
+last point equals the fund total by construction, because the buckets arrive as
+deltas and are walked backwards from it. The split-adjusted overlay is gone on
+both clients; the series is a single line. Grid lines, exact tick placement and
+animation timing differ.
 
 ### The filter's 500-row cap is kept, but reported
 

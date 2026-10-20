@@ -41,11 +41,14 @@ export const qk = {
   /** A whole year, split instances expanded. */
   year: (year: number) => [TX, 'year', year] as const,
 
-  /** An arbitrary date range, used by the dashboard comparison windows. */
-  range: (start: string, end: string) => [TX, 'range', start, end] as const,
-
   /** The anchored balance series for a chart time range. */
   anchored: (range: TimeRange) => [TX, 'anchored', range] as const,
+
+  /** The current month's pace figures, from `get_month_pace`. */
+  monthPace: () => [TX, 'month-pace'] as const,
+
+  /** Per-category pace, from `get_month_movers`. */
+  monthMovers: () => [TX, 'month-movers'] as const,
 
   /** Split-across-year sources for a year and the one before it. */
   splitSources: (year: number) => [TX, 'split-sources', year] as const,

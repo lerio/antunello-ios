@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/tr-bonuses.ts
- * @upstream-sha256 3296b306fd65c4931495f757a5ed5d6164a0fe49c906f4c7041e1d1f342a5cf1
- * @vendored-on 2026-09-11
+ * @upstream-sha256 4b59977918cc38a1c34ba23e9baf155a927d39eb10e87b2f0081e2e866aa5c5b
+ * @vendored-on 2026-10-19
  * @parity exact
  * @divergences none
  *
@@ -35,7 +35,7 @@ interface PendingBonusData {
   wealth_fund_category_id?: string | null;
 }
 
-export interface TrBonusBuildResult {
+interface TrBonusBuildResult {
   rows: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>[];
   /** Human-readable reasons why a bonus was skipped (surfaced as toasts). */
   warnings: string[];
