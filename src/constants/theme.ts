@@ -17,7 +17,10 @@ export const Colors = {
   light: {
     text: '#000000',
     textSecondary: '#60646C',
-    background: '#ffffff',
+    /** The web app's page background (Tailwind gray-50). */
+    background: '#F9FAFB',
+    /** The top bar, including the status-bar area behind it. */
+    header: '#FFFFFF',
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     card: '#FFFFFF',
@@ -41,10 +44,14 @@ export const Colors = {
   dark: {
     text: '#ffffff',
     textSecondary: '#B0B4BA',
-    background: '#000000',
+    /** The web app's page background (Tailwind gray-900). */
+    background: '#101828',
+    /** The top bar, including the status-bar area behind it. */
+    header: '#000000',
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
-    card: '#1C1C1E',
+    /** The web app's card surface (Tailwind gray-800). */
+    card: '#1E2939',
     separator: '#38383A',
     tint: '#FFFFFF',
     onTint: '#000000',

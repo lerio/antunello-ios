@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/date.ts
- * @upstream-sha256 2357233a6d9f8ab903577a3ad7079ae3989ba38994707d2b48f79679e18146ab
- * @vendored-on 2026-10-19
+ * @upstream-sha256 30a6dec50a6173cf1a9f0ab513936aef69e9108280d9806c5de1c983b2b99a0f
+ * @vendored-on 2026-10-27
  * @parity exact
  * @divergences none
  *
@@ -114,22 +114,22 @@ export function formatDateHeader(isoString: string): string {
   const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
 
+  const dayMonth = date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  })
+
   if (dateOnly.getTime() === todayOnly.getTime()) {
-    return `Today, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+    return `Today, ${dayMonth}`
   } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    return `Yesterday, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+    return `Yesterday, ${dayMonth}`
   } else if (date.getFullYear() === today.getFullYear()) {
-    // Same year: "Monday, August 2"
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric'
-    })
+    const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' })
+    return `${weekday}, ${dayMonth}`
   } else {
-    // Different year: "Tuesday, December 31, 2024"
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     })
@@ -157,21 +157,19 @@ export function formatDateHeaderWithYear(isoString: string): string {
   yesterday.setDate(today.getDate() - 1)
   const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
 
+  const dayMonth = date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  })
+
   if (dateOnly.getTime() === todayOnly.getTime()) {
-    // For current year: "Today, August 15"
-    // For different year: "Today, August 15, 2023"
-    const baseFormat = `Today, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
-    return date.getFullYear() === today.getFullYear() ? baseFormat : `${baseFormat}, ${date.getFullYear()}`
+    return `Today, ${dayMonth}`
   } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    // For current year: "Yesterday, August 14"
-    // For different year: "Yesterday, August 14, 2023"
-    const baseFormat = `Yesterday, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
-    return date.getFullYear() === today.getFullYear() ? baseFormat : `${baseFormat}, ${date.getFullYear()}`
+    return `Yesterday, ${dayMonth}`
   } else {
-    // Always include year: "Thursday, July 31, 2023"
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     })

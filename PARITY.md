@@ -311,31 +311,23 @@ What is *not* reproduced is the silence. When the cap is hit, the results screen
 says so, under the summary card. Without that the balance would present a
 truncated set as the whole picture.
 
-Two related differences:
+### Search and filter are one screen, over raw rows
 
-- **Year-only filters no longer double-count split sources.** Upstream builds its
-  expansion input as `[...results, ...allSplitSources]`, and `results` for a
-  year already contains that year's split sources — so each is expanded twice,
-  producing a duplicated row and a doubled total. This app deduplicates by id
-  before expanding. The two agree whenever upstream does not duplicate, and this
-  one is right when it does. **This is the only place the port knowingly returns
-  a different result from the web app**, and it is a correction, not a
-  convention.
-- **Split sources are capped at 10,000 rather than 500 per year**, matching the
-  month and year views. The limit is not reachable with any realistic number of
-  splits.
+Both apps merged search and filtering: a search field with a filter control (an
+expanding panel on the web, a full-height sheet here) feeding **one** query. The
+results are the transactions as stored — split sources appear once rather than as
+synthetic monthly slices, which belong to the month and year views.
 
-### The filter's amount range is two fields, not a slider
+### The filter's amount range is one currency, in two fields
 
 The web app's dual-thumb slider is bounded at 10,000 in steps of 100, so it cannot
-express "over 12,000" or "under 5". Two numeric fields are exact, quicker than
-dragging on a phone, and accept every value the slider does — a superset rather
-than a divergence.
+express "over 12,000" or "under 5". iOS uses two numeric fields, which are exact,
+quicker than dragging on a phone, and accept every value the slider does.
 
-Both apps compare the range against `eur_amount`, so the euro label is true: a
-¥10,000 purchase is about €60. A EUR row with no `eur_amount` falls back to
-`amount`; a non-EUR row with no conversion is left out, as it cannot be placed in
-the range. (Both used to compare the raw `amount` in the row's own currency.)
+On both apps the range only exists while **exactly one currency** is selected, and
+it compares the row's own `amount` in that currency. Changing the currency
+selection clears the range, so a bound can never linger invisibly. (It used to
+compare converted euros across every currency.)
 
 ### The filter's currency list is complete, not sampled
 
@@ -417,11 +409,11 @@ pencil: a 20-point icon is not a comfortable target, and a card has nothing else
 to be tapped for. Budgets also has no floating add-transaction button, matching
 the web page — its own "Add budget" button is the one affordance there.
 
-### The transaction list's search field is not editable
+### The transaction list's search entry is a button, not a field
 
-Tapping it pushes the search screen, where the field focuses. An editable field on
-the list itself would either search in place — competing with the month strip for
-what the list is showing — or look editable and then navigate, which is worse. The
-back gesture replaces the web app's `from_year`/`from_month` query parameters:
-search is pushed onto the period it was opened from, so popping returns there by
-construction.
+The Activity header offers a search button that pushes the search screen, where
+the field focuses. An editable field on the list itself would either search in
+place — competing with the month strip for what the list is showing — or look
+editable and then navigate, which is worse. The back gesture replaces the web
+app's `from_year`/`from_month` query parameters: search is pushed onto the period
+it was opened from, so popping returns there by construction.

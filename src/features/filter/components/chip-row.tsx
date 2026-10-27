@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -15,6 +15,7 @@ type ChipRowProps = {
   selected: readonly string[];
   onToggle: (value: string) => void;
   accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -24,11 +25,17 @@ type ChipRowProps = {
  * costs less than a tap to open a picker. Lists long enough to need scrolling go
  * through `PickerSheet` instead.
  */
-export function ChipRow({ options, selected, onToggle, accessibilityLabel }: ChipRowProps) {
+export function ChipRow({
+  options,
+  selected,
+  onToggle,
+  accessibilityLabel,
+  style,
+}: ChipRowProps) {
   const theme = useTheme();
 
   return (
-    <View style={styles.row} accessibilityLabel={accessibilityLabel}>
+    <View style={[styles.row, style]} accessibilityLabel={accessibilityLabel}>
       {options.map((option) => {
         const isSelected = selected.includes(option.value);
 

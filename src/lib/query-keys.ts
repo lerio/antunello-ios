@@ -89,10 +89,7 @@ export const qk = {
   category: (category: string, subCategory: string | null, range: TimeRange) =>
     ['category', category, subCategory ?? '*', range] as const,
 
-  /** Full-text search results for a query string. */
-  search: (query: string) => ['search', query] as const,
-
-  /** Filtered results, keyed by a stable hash of the filter criteria. */
+  /** Search + filtered results, keyed by a stable hash of both inputs. */
   filter: (criteriaHash: string) => ['filter', criteriaHash] as const,
 
   /** Title autocomplete suggestions. */

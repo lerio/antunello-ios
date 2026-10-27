@@ -1,5 +1,6 @@
 import { SymbolView } from 'expo-symbols';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Filter } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,37 +11,62 @@ import {
   View,
 } from 'react-native';
 
-import { AddTransactionButton } from '@/components/add-transaction-button';
+import { AddTransactionButton } from '@/components/floating-buttons';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
+import { FilterSheet } from '@/features/filter/components/filter-sheet';
+import {
+  hasAnyFilter,
+  initialFilterCriteria,
+  type FilterCriteria,
+} from '@/features/filter/filter-criteria';
+import { useFilteredTransactions } from '@/features/filter/use-filtered-transactions';
 import { SearchSummary } from '@/features/search/components/search-summary';
-import { useTransactionSearch } from '@/features/search/use-transaction-search';
 import { DayHeader } from '@/features/transactions/components/day-header';
 import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { groupTransactionsByDay, type DayGroup } from '@/features/transactions/group-by-day';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * Search across every transaction.
+ * Search and filter across every transaction.
  *
- * A search field the user types into, rather than the native navigation search
- * bar: this is a pushed screen with its own cancel affordance, and a plain field
- * keeps focus, clearing and the empty states under one roof instead of split
- * between a native control and this component.
+ * One screen rather than two: the search field is the primary input and the
+ * filter button opens the filter sheet over the same results. Search text and
+ * criteria are sent to one query, so the results always reflect both.
  *
- * Results are day-grouped with the year shown, since they span every year on
- * record — the one place in the app where a date without a year is ambiguous.
+ * Unlike the month and year views, these results are the raw stored rows —
+ * split sources appear once, not as their monthly slices.
  */
 export function SearchView() {
   const router = useRouter();
   const theme = useTheme();
+  const params = useLocalSearchParams<{ filters?: string }>();
+  const initialFiltersOpen = params.filters === '1';
   const inputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState('');
-  const { results, searchedQuery, isLoading, isError, error, refresh } = useTransactionSearch(query);
+  const [criteria, setCriteria] = useState<FilterCriteria>(initialFilterCriteria);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [isSheetOpen, setSheetOpen] = useState(initialFiltersOpen);
+
+  const hasSearch = query.trim().length > 0;
+  const enabled = hasSearch || hasInteracted;
+
+  const { results, truncated, isLoading, isError, error, refresh } =
+    useFilteredTransactions(criteria, enabled, query);
+
+  const handleChange = useCallback((next: FilterCriteria) => {
+    setCriteria(next);
+    setHasInteracted(hasAnyFilter(next));
+  }, []);
+
+  const openSheet = useCallback(() => {
+    inputRef.current?.blur();
+    setSheetOpen(true);
+  }, []);
 
   const sections = useMemo(
     () => groupTransactionsByDay(results).map((day) => ({ ...day, data: day.transactions })),
@@ -49,14 +75,15 @@ export function SearchView() {
 
   const { renderItem } = useTransactionRowNavigation();
 
+  const showYear = criteria.year === null;
   const renderSectionHeader = useCallback(
-    ({ section }: { section: DayGroup }) => <DayHeader day={section} showYear />,
-    [],
+    ({ section }: { section: DayGroup }) => <DayHeader day={section} showYear={showYear} />,
+    [showYear],
   );
 
   const keyExtractor = useCallback((item: Transaction) => item.id, []);
 
-  const isBlank = query.trim().length === 0;
+  const filtersActive = hasAnyFilter(criteria);
 
   return (
     <Screen>
@@ -70,7 +97,7 @@ export function SearchView() {
             placeholder="Search transactions"
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text }]}
-            autoFocus
+            autoFocus={!initialFiltersOpen}
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="search"
@@ -78,6 +105,21 @@ export function SearchView() {
             accessibilityLabel="Search transactions"
           />
         </View>
+
+        <Pressable
+          onPress={openSheet}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Filters"
+          style={({ pressed }) => [
+            styles.filterButton,
+            { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.6 : 1 },
+          ]}>
+          <Filter size={18} color={theme.tint} />
+          {filtersActive ? (
+            <View style={[styles.filterDot, { backgroundColor: theme.tint }]} />
+          ) : null}
+        </Pressable>
 
         <Pressable
           onPress={() => router.back()}
@@ -101,21 +143,33 @@ export function SearchView() {
         onRefresh={refresh}
         refreshing={false}
         ListHeaderComponent={
-          results.length > 0 ? <SearchSummary transactions={results} /> : null
+          results.length > 0 ? (
+            <View>
+              <SearchSummary transactions={results} />
+              {truncated ? <TruncatedNotice /> : null}
+            </View>
+          ) : null
         }
         ListEmptyComponent={
           <SearchPlaceholder
-            isBlank={isBlank}
+            enabled={enabled}
+            hasSearch={hasSearch}
             isLoading={isLoading}
             isError={isError}
             error={error}
-            searchedQuery={searchedQuery}
           />
         }
         contentContainerStyle={styles.listContent}
       />
 
       <AddTransactionButton onPress={() => router.push('/transaction/new')} />
+
+      <FilterSheet
+        visible={isSheetOpen}
+        criteria={criteria}
+        onChange={handleChange}
+        onClose={() => setSheetOpen(false)}
+      />
     </Screen>
   );
 }
@@ -123,27 +177,26 @@ export function SearchView() {
 /**
  * What the list shows when it has no rows.
  *
- * The four states are mutually exclusive and each says something different about
- * why the screen is empty, so they are resolved in one place rather than as four
- * competing `ListEmptyComponent` expressions.
+ * The states are mutually exclusive and each says something different about why
+ * the screen is empty, so they are resolved in one place.
  */
 function SearchPlaceholder({
-  isBlank,
+  enabled,
+  hasSearch,
   isLoading,
   isError,
   error,
-  searchedQuery,
 }: {
-  isBlank: boolean;
+  enabled: boolean;
+  hasSearch: boolean;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
-  searchedQuery: string;
 }) {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn’t search"
+        title="Couldn’t load transactions"
         detail={error instanceof Error ? error.message : 'Unknown error'}
       />
     );
@@ -157,13 +210,40 @@ function SearchPlaceholder({
     );
   }
 
-  if (isBlank) {
-    return <EmptyState title="Search transactions" detail="Type to search titles and categories." />;
+  if (!enabled) {
+    return (
+      <EmptyState
+        title="Search transactions"
+        detail="Type a search or adjust filters to see results."
+      />
+    );
   }
 
-  return <EmptyState title="No transactions found" detail={`Nothing matches “${searchedQuery}”.`} />;
+  return (
+    <EmptyState
+      title="No transactions found"
+      detail={
+        hasSearch
+          ? 'Try a different search or adjust the filters.'
+          : 'No transactions match the current filters.'
+      }
+    />
+  );
 }
 
+/** Says when the 500-row cap makes the results partial. */
+function TruncatedNotice() {
+  const theme = useTheme();
+
+  return (
+    <View style={[styles.notice, { borderColor: theme.separator }]}>
+      <SymbolView name="exclamationmark.triangle" size={12} tintColor={theme.textSecondary} />
+      <ThemedText themeColor="textSecondary" style={styles.noticeText}>
+        Showing the 500 most recent matches. Narrow the search or filters.
+      </ThemedText>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   searchRow: {
@@ -188,6 +268,21 @@ const styles = StyleSheet.create({
     fontSize: 17,
     padding: 0,
   },
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.small + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   cancel: {
     fontSize: 17,
   },
@@ -201,5 +296,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.two,
     padding: Spacing.four,
+  },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    marginHorizontal: Spacing.three,
+    marginTop: Spacing.two,
+    padding: Spacing.two,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.medium,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
   },
 });

@@ -41,7 +41,7 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Home" subtitle={todayLabel()} />
+      <ScreenHeader title="Home" />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -55,20 +55,10 @@ export default function HomeScreen() {
   );
 }
 
-/** `Tuesday, 20 October` — context for the two cards below. */
-function todayLabel(): string {
-  const now = new Date();
-  const weekday = now.toLocaleDateString('en-GB', { weekday: 'long' });
-  const dayMonth = now.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-  });
-  return `${weekday}, ${dayMonth}`;
-}
-
 const styles = StyleSheet.create({
   content: {
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
     gap: Spacing.three,
   },
 });

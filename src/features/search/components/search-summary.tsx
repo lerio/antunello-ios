@@ -1,4 +1,4 @@
-import { SymbolView } from 'expo-symbols';
+import { EyeOff } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -53,7 +53,7 @@ export function SearchSummary({ transactions }: { transactions: readonly Transac
       {showHidden ? (
         <View style={[styles.footnote, { borderTopColor: theme.separator }]}>
           <View style={styles.footnoteHead}>
-            <SymbolView name="eye.slash" size={12} tintColor={theme.textSecondary} />
+            <EyeOff size={12} color={theme.textSecondary} strokeWidth={2} />
             <ThemedText themeColor="textSecondary" style={styles.footnoteLabel}>
               {totals.hiddenTransactionCount}{' '}
               {totals.hiddenTransactionCount === 1 ? 'transaction' : 'transactions'} hidden from

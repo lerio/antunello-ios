@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
@@ -7,12 +7,28 @@ import {
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PickerList, type PickerListProps, type PickerOption } from '@/components/picker-list';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { CURRENCY_OPTIONS } from '@/domain/app-constants';
 import {
   filterReducer,
   hasAnyFilter,
@@ -64,19 +80,22 @@ const PICKER_TITLES: Record<NonNullable<OpenPicker>, string> = {
 type FilterSheetProps = {
   visible: boolean;
   criteria: FilterCriteria;
-  /** Called for every change, so the results behind the sheet update live. */
+  /** Called for every change, so the results update as controls are touched. */
   onChange: (criteria: FilterCriteria) => void;
+  /** Done, or the handle pulled down: keep the filters and dismiss. */
   onClose: () => void;
 };
+
+/** How far, or how fast, a pull must go to dismiss rather than spring back. */
+const DISMISS_DISTANCE = 120;
+const DISMISS_VELOCITY = 900;
 
 /**
  * The filter controls.
  *
- * A sheet over the results rather than a panel above them: the result list is
- * the point, and a sheet lets it use the whole screen while the controls are
- * being set. Changes apply as they are made — there is no Apply button, because
- * there is nothing to apply them to but the list already behind the sheet — and
- * Done just dismisses it.
+ * A full-height sheet pulled up to the top, with no dimmed backdrop. Changes
+ * apply as they are made, so Done and pulling the handle down are the same
+ * thing: the sheet goes away and the filters stay.
  *
  * The long lists (categories, subcategories, funds) are tapped through to a
  * picker, since twenty chips with their subcategories would bury the controls
@@ -86,7 +105,6 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
-
   const { data: currencies } = useCurrencies();
   const { data: funds } = useFunds();
   const years = useAvailableYears();
@@ -127,6 +145,9 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
     })),
     [funds],
   );
+
+  const selectedCurrency =
+    criteria.currencies.length === 1 ? criteria.currencies[0] : null;
 
   const yearOptions: PickerOption[] = useMemo(
     () => [
@@ -193,13 +214,14 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
       animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
-
-      <View
-        style={[
-          styles.sheet,
-          { backgroundColor: theme.background, paddingBottom: insets.bottom },
-        ]}>
+      <PullDownSheet
+        top={insets.top}
+        bottomInset={insets.bottom}
+        backgroundColor={theme.background}
+        handleColor={theme.textSecondary}
+        onClose={onClose}
+        header={
+          <>
         <View style={[styles.header, { borderBottomColor: theme.separator }]}>
           {openPicker ? (
             // A drill-down inside the sheet rather than a second modal on top of
@@ -238,6 +260,8 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
             <ThemedText style={[styles.headerButton, { color: theme.tint }]}>Done</ThemedText>
           </Pressable>
         </View>
+          </>
+        }>
 
         {openPicker ? (
           <PickerList
@@ -248,39 +272,52 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
           />
         ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Section label="Period">
-            <View style={styles.periodRow}>
+          <View style={styles.inlineRow}>
+            <ThemedText themeColor="textSecondary" style={styles.inlineLabel}>
+              Period
+            </ThemedText>
+            <View style={styles.inlinePeriodRow}>
               <FieldButton
                 label={criteria.year === null ? 'All time' : String(criteria.year)}
                 onPress={() => setOpenPicker('year')}
+                style={styles.inlineField}
               />
               <FieldButton
                 label={criteria.month === null ? 'Whole year' : MONTH_NAMES[criteria.month - 1]}
                 onPress={() => setOpenPicker('month')}
                 disabled={criteria.year === null}
+                style={styles.inlineField}
               />
             </View>
-          </Section>
-
-          <Section label="Type">
-            <ChipRow
-              options={TYPE_OPTIONS}
-              selected={criteria.types}
-              onToggle={(value) => dispatch({ type: 'toggleType', value: value as FilterType })}
-              accessibilityLabel="Type"
-            />
-          </Section>
+          </View>
 
           {(currencies ?? []).length > 0 ? (
-            <Section label="Currency">
+            <View style={styles.inlineRow}>
+              <ThemedText themeColor="textSecondary" style={styles.inlineLabel}>
+                Currency
+              </ThemedText>
               <ChipRow
                 options={(currencies ?? []).map((code) => ({ value: code, label: code }))}
                 selected={criteria.currencies}
                 onToggle={(value) => dispatch({ type: 'toggleCurrency', value })}
                 accessibilityLabel="Currency"
+                style={styles.inlineChips}
               />
-            </Section>
+            </View>
           ) : null}
+
+          <View style={styles.inlineRow}>
+            <ThemedText themeColor="textSecondary" style={styles.inlineLabel}>
+              Type
+            </ThemedText>
+            <ChipRow
+              options={TYPE_OPTIONS}
+              selected={criteria.types}
+              onToggle={(value) => dispatch({ type: 'toggleType', value: value as FilterType })}
+              accessibilityLabel="Type"
+              style={styles.inlineChips}
+            />
+          </View>
 
           <Section
             label="Category"
@@ -297,23 +334,24 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
             />
           </Section>
 
-          <Section
-            label="Subcategory"
-            summary={
-              criteria.subCategories.length > 0
-                ? criteria.subCategories.map(labelOfSubCategory).join(', ')
-                : undefined
-            }>
-            <FieldButton
-              label={
-                criteria.subCategories.length === 0
-                  ? 'Any subcategory'
-                  : `${criteria.subCategories.length} selected`
-              }
-              onPress={() => setOpenPicker('subcategory')}
-              disabled={subCategoryOptions.length === 0}
-            />
-          </Section>
+          {criteria.mainCategories.length > 0 && subCategoryOptions.length > 0 ? (
+            <Section
+              label="Subcategory"
+              summary={
+                criteria.subCategories.length > 0
+                  ? criteria.subCategories.map(labelOfSubCategory).join(', ')
+                  : undefined
+              }>
+              <FieldButton
+                label={
+                  criteria.subCategories.length === 0
+                    ? 'Any subcategory'
+                    : `${criteria.subCategories.length} selected`
+                }
+                onPress={() => setOpenPicker('subcategory')}
+              />
+            </Section>
+          ) : null}
 
           {fundOptions.length > 0 ? (
             <Section
@@ -334,31 +372,109 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
             </Section>
           ) : null}
 
-          <Section label="Amount range">
-            <View style={styles.periodRow}>
-              <AmountField
-                value={criteria.amountMin}
-                placeholder="Min"
-                onChange={(value) =>
-                  dispatch({ type: 'setAmountRange', min: value, max: criteria.amountMax })
-                }
-              />
-              <AmountField
-                value={criteria.amountMax}
-                placeholder="Max"
-                onChange={(value) =>
-                  dispatch({ type: 'setAmountRange', min: criteria.amountMin, max: value })
-                }
-              />
-            </View>
-            <ThemedText themeColor="textSecondary" style={styles.hint}>
-              In euros. Other currencies are compared at their converted amount.
-            </ThemedText>
-          </Section>
+          {selectedCurrency ? (
+            <Section label="Amount range">
+              <View style={styles.periodRow}>
+                <AmountField
+                  value={criteria.amountMin}
+                  placeholder="Min"
+                  currency={selectedCurrency}
+                  onChange={(value) =>
+                    dispatch({ type: 'setAmountRange', min: value, max: criteria.amountMax })
+                  }
+                />
+                <AmountField
+                  value={criteria.amountMax}
+                  placeholder="Max"
+                  currency={selectedCurrency}
+                  onChange={(value) =>
+                    dispatch({ type: 'setAmountRange', min: criteria.amountMin, max: value })
+                  }
+                />
+              </View>
+            </Section>
+          ) : null}
         </ScrollView>
         )}
-      </View>
+      </PullDownSheet>
     </Modal>
+  );
+}
+
+type PullDownSheetProps = {
+  top: number;
+  bottomInset: number;
+  backgroundColor: string;
+  handleColor: string;
+  /** Dismiss: Done and a completed pull both end up here. */
+  onClose: () => void;
+  /** The title row; it is part of the drag area along with the handle. */
+  header: ReactNode;
+  children: ReactNode;
+};
+
+/**
+ * A sheet pulled up to the top, with a handle that drags it back down.
+ *
+ * The drag is a native-thread pan from gesture-handler rather than the JS
+ * `PanResponder` it replaced: the sheet lives in a Modal, which is its own
+ * native root, and the JS responder never saw the drag there. For the same
+ * reason it carries its own `GestureHandlerRootView`.
+ *
+ * This is a component of its own so that its animated position is created fresh
+ * each time the Modal opens — a Modal renders nothing while hidden — which means
+ * a previous pull can never leave the next opening off-screen.
+ */
+function PullDownSheet({
+  top,
+  bottomInset,
+  backgroundColor,
+  handleColor,
+  onClose,
+  header,
+  children,
+}: PullDownSheetProps) {
+  const { height: windowHeight } = useWindowDimensions();
+  const translateY = useSharedValue(0);
+
+  // Only a clear downward pull activates the gesture, so taps on Clear and Done
+  // in the header still go through.
+  const pan = Gesture.Pan()
+    .activeOffsetY(8)
+    .failOffsetX([-24, 24])
+    .onUpdate((event) => {
+      translateY.value = Math.max(0, event.translationY);
+    })
+    .onEnd((event) => {
+      if (event.translationY > DISMISS_DISTANCE || event.velocityY > DISMISS_VELOCITY) {
+        translateY.value = withTiming(windowHeight, { duration: 180 }, (finished) => {
+          if (finished) runOnJS(onClose)();
+        });
+      } else {
+        translateY.value = withSpring(0);
+      }
+    });
+
+  const motion = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <GestureHandlerRootView style={styles.gestureRoot}>
+      <Animated.View
+        style={[styles.sheet, { backgroundColor, top, paddingBottom: bottomInset }, motion]}>
+        <GestureDetector gesture={pan}>
+          <View collapsable={false}>
+            <View style={styles.handleArea} accessibilityLabel="Pull down to close">
+              <View style={[styles.handle, { backgroundColor: handleColor }]} />
+            </View>
+            {header}
+          </View>
+        </GestureDetector>
+
+        {children}
+      </Animated.View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -394,10 +510,12 @@ function FieldButton({
   label,
   onPress,
   disabled = false,
+  style,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
 
@@ -410,6 +528,7 @@ function FieldButton({
       accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.field,
+        style,
         {
           backgroundColor: theme.card,
           borderColor: theme.separator,
@@ -435,15 +554,19 @@ function FieldButton({
 function AmountField({
   value,
   placeholder,
+  currency,
   onChange,
 }: {
   value: number | null;
   placeholder: string;
+  currency: string;
   onChange: (value: number | null) => void;
 }) {
   const theme = useTheme();
   const [text, setText] = useState(value === null ? '' : String(value));
   const [lastValue, setLastValue] = useState(value);
+  const symbol =
+    CURRENCY_OPTIONS.find((option) => option.value === currency)?.symbol ?? `${currency} `;
 
   // Adopting an outside change — the Clear button — without fighting the user
   // mid-keystroke. Two things make that delicate: re-seeding from the parsed
@@ -477,7 +600,7 @@ function AmountField({
   return (
     <View style={[styles.amountField, { backgroundColor: theme.card, borderColor: theme.separator }]}>
       <ThemedText themeColor="textSecondary" style={styles.currencyPrefix}>
-        {'€'}
+        {symbol}
       </ThemedText>
       <TextInput
         value={text}
@@ -494,22 +617,31 @@ function AmountField({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  gestureRoot: {
+    flex: 1,
   },
   sheet: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: '85%',
     borderTopLeftRadius: Radius.large,
     borderTopRightRadius: Radius.large,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
+  },
+  handleArea: {
+    alignItems: 'center',
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    opacity: 0.6,
   },
   header: {
     flexDirection: 'row',
@@ -548,6 +680,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexShrink: 1,
   },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  inlineLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    flexShrink: 0,
+  },
+  inlineField: {
+    flex: 1,
+  },
+  inlinePeriodRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Spacing.two,
+  },
+  inlineChips: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   periodRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -584,8 +739,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontVariant: ['tabular-nums'],
     padding: 0,
-  },
-  hint: {
-    fontSize: 12,
   },
 });

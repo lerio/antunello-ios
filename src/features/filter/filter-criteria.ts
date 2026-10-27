@@ -162,14 +162,20 @@ export function filterReducer(state: FilterCriteria, action: FilterAction): Filt
       if (!hasIncomeOrExpense || types.length === 0) return { ...state, types };
 
       const allowed = selectableCategories(types).map((category) => category.category);
+      const mainCategories = state.mainCategories.filter((main) => allowed.includes(main));
 
       return {
         ...state,
         types,
-        mainCategories: state.mainCategories.filter((main) => allowed.includes(main)),
-        subCategories: state.subCategories.filter((sub) =>
-          allowed.includes(parentOfSubCategory(sub)),
-        ),
+        mainCategories,
+        // A subcategory is only meaningful alongside its selected parent; with
+        // no parent left, the selector disappears and its values must go too.
+        subCategories:
+          mainCategories.length === 0
+            ? []
+            : state.subCategories.filter((sub) =>
+                mainCategories.includes(parentOfSubCategory(sub)),
+              ),
       };
     }
 
@@ -179,13 +185,12 @@ export function filterReducer(state: FilterCriteria, action: FilterAction): Filt
       return {
         ...state,
         mainCategories,
-        // An empty selection means "every category", so no subcategory becomes
-        // unreachable — only an actual selection prunes.
-        subCategories: state.subCategories.filter(
-          (sub) =>
-            mainCategories.length === 0 ||
-            mainCategories.includes(parentOfSubCategory(sub)),
-        ),
+        subCategories:
+          mainCategories.length === 0
+            ? []
+            : state.subCategories.filter((sub) =>
+                mainCategories.includes(parentOfSubCategory(sub)),
+              ),
       };
     }
 
@@ -193,7 +198,14 @@ export function filterReducer(state: FilterCriteria, action: FilterAction): Filt
       return { ...state, subCategories: toggleValue(state.subCategories, action.value) };
 
     case 'toggleCurrency':
-      return { ...state, currencies: toggleValue(state.currencies, action.value) };
+      return {
+        ...state,
+        currencies: toggleValue(state.currencies, action.value),
+        // The amount range only exists for a single currency; a stale bound
+        // must not survive a selection that hides it.
+        amountMin: null,
+        amountMax: null,
+      };
 
     case 'toggleFund':
       return { ...state, fundSourceIds: toggleValue(state.fundSourceIds, action.value) };

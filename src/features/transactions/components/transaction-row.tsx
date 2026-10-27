@@ -1,7 +1,8 @@
-import { SymbolView } from 'expo-symbols';
-import { memo } from 'react';
+import { ArrowRightLeft, GitFork } from 'lucide-react-native';
+import { memo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { CategoryGlyph } from '@/components/category-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -9,11 +10,9 @@ import {
   getTransactionDisplayAmount,
   getTransactionDisplayEurAmount,
 } from '@/domain/split-transactions';
-import { isReadOnlyTransaction } from '@/domain/transaction-utils';
 import type { Transaction } from '@/domain/types';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { useTheme } from '@/hooks/use-theme';
-import { symbolForCategory } from '@/lib/sf-symbols';
 
 type TransactionRowProps = {
   transaction: Transaction;
@@ -34,8 +33,8 @@ type TransactionRowProps = {
  *
  *  - The icon opens the category and the subcategory label opens the
  *    subcategory, so a row has **two** navigation targets besides itself.
- *  - A split instance is dimmed and desaturated, and shows how many slices
- *    remain.
+ *  - A split instance sits on a tinted surface with a `Split` badge that says how
+ *    many slices remain.
  *  - A row hidden from totals is dimmed, so it reads as excluded while still
  *    being visible in the list.
  *  - Only income is covered by privacy mode here — expenses stay readable. See
@@ -57,14 +56,19 @@ export const TransactionRow = memo(function TransactionRow({
   const originalAmount = getTransactionDisplayAmount(transaction);
 
   const isTransfer = transaction.is_money_transfer === true;
-  const isReadOnly = isReadOnlyTransaction(transaction);
   const isSplitInstance = transaction.split_across_year === true;
+  const isIncome = transaction.type === 'income';
 
+  // Every expense is red; movements stay neutral because no money leaves.
   const amountColor = isTransfer
     ? theme.transfer
-    : transaction.type === 'expense'
-      ? theme.expense
-      : theme.income;
+    : isIncome
+      ? theme.income
+      : theme.expense;
+
+  // Only a row excluded from totals is dimmed. A split is marked by its badge
+  // and tinted surface instead, so its text keeps full contrast.
+  const baseOpacity = transaction.hide_from_totals ? 0.5 : 1;
 
   return (
     <Pressable
@@ -72,15 +76,24 @@ export const TransactionRow = memo(function TransactionRow({
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.row,
-        { opacity: pressed ? 0.6 : transaction.hide_from_totals ? 0.5 : 1 },
-        isReadOnly && styles.readOnly,
+        {
+          opacity: pressed ? baseOpacity * 0.7 : baseOpacity,
+          backgroundColor: isSplitInstance ? theme.backgroundElement : 'transparent',
+        },
       ]}>
-      <CategoryIcon
-        category={transaction.main_category}
-        onPress={onCategoryPress}
-        background={theme.backgroundElement}
-        tint={theme.textSecondary}
-      />
+      {isTransfer ? (
+        <View style={[styles.icon, { backgroundColor: theme.backgroundElement }]}>
+          <ArrowRightLeft size={20} color={theme.textSecondary} strokeWidth={2} />
+        </View>
+      ) : (
+        <CategoryIcon
+          category={transaction.main_category}
+          subCategory={transaction.sub_category}
+          onPress={onCategoryPress}
+          background={theme.backgroundElement}
+          tint={theme.textSecondary}
+        />
+      )}
 
       <View style={styles.middle}>
         <ThemedText style={styles.title} numberOfLines={1}>
@@ -88,37 +101,45 @@ export const TransactionRow = memo(function TransactionRow({
         </ThemedText>
 
         <View style={styles.metaRow}>
-          <CategoryLabel
-            mainCategory={transaction.main_category}
-            subCategory={transaction.sub_category}
-            onPress={onSubCategoryPress}
-          />
-
-          {isSplitInstance ? (
-            <SymbolView name="arrow.triangle.branch" size={12} tintColor={theme.textSecondary} />
-          ) : null}
-
-          {transaction.split_remaining_count !== undefined ? (
-            <ThemedText themeColor="textSecondary" style={styles.pill}>
-              {transaction.split_remaining_count} left
+          {isTransfer ? (
+            <ThemedText themeColor="textSecondary" style={styles.meta} numberOfLines={1}>
+              Movement
             </ThemedText>
+          ) : (
+            <CategoryLabel
+              mainCategory={transaction.main_category}
+              subCategory={transaction.sub_category}
+              onPress={onSubCategoryPress}
+            />
+          )}
+
+          {isSplitInstance || transaction.split_remaining_count ? (
+            <View
+              style={[styles.splitChip, { backgroundColor: theme.backgroundSelected }]}>
+              <GitFork size={12} color={theme.textSecondary} strokeWidth={2} />
+              <ThemedText themeColor="textSecondary" style={styles.splitChipLabel}>
+                {transaction.split_remaining_count
+                  ? `Split · ${transaction.split_remaining_count} left`
+                  : 'Split'}
+              </ThemedText>
+            </View>
           ) : null}
         </View>
       </View>
 
       <View style={styles.amounts}>
         <PrivacyValue
-          hidden={transaction.type === 'income'}
           style={[styles.amount, { color: amountColor }]}
           numberOfLines={1}>
-          {eurAmountIsKnown
-            ? formatCurrency(Math.abs(eurAmount), 'EUR')
-            : formatCurrency(Math.abs(originalAmount), transaction.currency)}
+          {`${isIncome ? '+' : ''}${
+            eurAmountIsKnown
+              ? formatCurrency(Math.abs(eurAmount), 'EUR')
+              : formatCurrency(Math.abs(originalAmount), transaction.currency)
+          }`}
         </PrivacyValue>
 
         {showOriginalCurrency && eurAmountIsKnown ? (
           <PrivacyValue
-            hidden={transaction.type === 'income'}
             themeColor="textSecondary"
             style={styles.original}
             numberOfLines={1}>
@@ -130,21 +151,60 @@ export const TransactionRow = memo(function TransactionRow({
   );
 });
 
+/**
+ * The rounded card around one day's rows.
+ *
+ * Mirrors the web app's day card: the header sits above it, the rows share one
+ * bordered surface, and the first and last rows carry the rounded corners.
+ */
+export function TransactionRowCard({
+  first,
+  last,
+  children,
+}: {
+  first: boolean;
+  last: boolean;
+  children: ReactNode;
+}) {
+  const theme = useTheme();
+
+  // Static styles for the shape, so a long day does not allocate a fresh object
+  // per row; only the two theme colours are built here.
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: theme.card, borderColor: theme.separator },
+        first && styles.cardFirst,
+        last && styles.cardLast,
+      ]}>
+      {children}
+    </View>
+  );
+}
+
 /** The circular category icon, tappable only once category routes exist. */
 function CategoryIcon({
   category,
+  subCategory,
   onPress,
   background,
   tint,
 }: {
   category: string;
+  subCategory?: string | null;
   onPress?: (category: string) => void;
   background: string;
   tint: string;
 }) {
   const icon = (
     <View style={[styles.icon, { backgroundColor: background }]}>
-      <SymbolView name={symbolForCategory(category)} size={19} tintColor={tint} />
+      <CategoryGlyph
+        category={category}
+        subCategory={subCategory}
+        size={20}
+        color={tint}
+      />
     </View>
   );
 
@@ -201,20 +261,36 @@ function CategoryLabel({
 }
 
 const styles = StyleSheet.create({
+  card: {
+    marginHorizontal: Spacing.three,
+    overflow: 'hidden',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  cardFirst: {
+    marginTop: Spacing.two + Spacing.one,
+    borderTopLeftRadius: Radius.large,
+    borderTopRightRadius: Radius.large,
+  },
+  cardLast: {
+    marginBottom: Spacing.four,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: Radius.large,
+    borderBottomRightRadius: Radius.large,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    minHeight: 64,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + Spacing.half,
-  },
-  readOnly: {
-    opacity: 0.6,
+    paddingVertical: Spacing.three,
   },
   icon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -223,37 +299,45 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.one,
+    gap: Spacing.one + 2,
   },
   meta: {
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  pill: {
-    fontSize: 11,
-    paddingHorizontal: Spacing.one,
-    paddingVertical: 1,
-    borderRadius: Radius.small / 2,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(128,128,128,0.18)',
+  splitChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.one + 2,
+    paddingVertical: Spacing.half,
+    borderRadius: 99,
+  },
+  splitChipLabel: {
+    fontSize: 12,
+    lineHeight: 14,
   },
   amounts: {
     alignItems: 'flex-end',
     gap: 1,
   },
   amount: {
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
   original: {
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 16,
     fontVariant: ['tabular-nums'],
   },
 });

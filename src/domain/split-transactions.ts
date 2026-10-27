@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/split-transactions.ts
- * @upstream-sha256 7c9621f7aa54996fe48df07907bfdd96b061308d5d3f16fd749aa4319e562c76
- * @vendored-on 2026-10-19
+ * @upstream-sha256 ea0d72bd9a81bef480dd9a17151a966f7685d5d61521763b99376a5f33db39ab
+ * @vendored-on 2026-10-27
  * @parity exact
  * @divergences none
  *
@@ -77,7 +77,12 @@ function getRoundedSplitMinorUnits(
   fractionDigits: number
 ): { regularMonthMinorUnits: number; firstMonthMinorUnits: number } {
   const totalMinorUnits = roundToMinorUnits(totalAmount, fractionDigits)
-  const regularMonthMinorUnits = roundToMinorUnits(totalAmount / SPLIT_PARTS, fractionDigits)
+  // Divide in integer minor units. `totalAmount / 12` can land exactly on a
+  // half-cent, where floating point rounds 72.025 down and SQL's numeric
+  // round() rounds it up; that cent-level disagreement must not exist.
+  const regularMonthMinorUnits =
+    Math.sign(totalMinorUnits) *
+    Math.floor(Math.abs(totalMinorUnits) / SPLIT_PARTS + 0.5)
   const firstMonthMinorUnits = totalMinorUnits - regularMonthMinorUnits * (SPLIT_PARTS - 1)
 
   return { regularMonthMinorUnits, firstMonthMinorUnits }

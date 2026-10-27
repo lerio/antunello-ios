@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:utils/supabase/fetch-all.ts
  * @upstream-sha256 8db97fdf0c850c43d35b1b34a2f91b4dd2fcbe9a70282e871646a53649685329
- * @vendored-on 2026-10-19
+ * @vendored-on 2026-10-27
  * @parity exact
  * @divergences none
  *

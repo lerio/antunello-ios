@@ -5,7 +5,6 @@ import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import { ThemePreferencePicker } from '@/features/appearance/theme-preference-picker';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -83,14 +82,6 @@ export default function SettingsScreen() {
           ]}>
           <ThemedText themeColor="destructive">Sign out</ThemedText>
         </Pressable>
-
-        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
-          APPEARANCE
-        </ThemedText>
-
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <ThemePreferencePicker />
-        </View>
 
         <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
           PRIVACY

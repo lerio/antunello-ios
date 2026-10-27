@@ -16,7 +16,7 @@ import {
   initialFilterCriteria,
   type FilterCriteria,
 } from '@/features/filter/filter-criteria';
-import { buildAmountCondition, buildFundCondition, planFilterQuery } from '@/features/filter/filter-query';
+import { buildFundCondition, planFilterQuery } from '@/features/filter/filter-query';
 
 function criteria(overrides: Partial<FilterCriteria> = {}): FilterCriteria {
   return { ...initialFilterCriteria, ...overrides };
@@ -120,35 +120,36 @@ describe('the fund filter', () => {
 });
 
 describe('the amount filter', () => {
-  it('passes bounds through, zero included', () => {
-    const plan = planFilterQuery(criteria({ amountMin: 0, amountMax: 250 }));
+  it('passes bounds through for a single currency, zero included', () => {
+    const plan = planFilterQuery(
+      criteria({ currencies: ['USD'], amountMin: 0, amountMax: 250 }),
+    );
 
     assert.equal(plan.amountMin, 0);
     assert.equal(plan.amountMax, 250);
   });
 
   it('leaves an unset bound null rather than defaulting it', () => {
-    const plan = planFilterQuery(criteria({ amountMin: 100 }));
+    const plan = planFilterQuery(criteria({ currencies: ['USD'], amountMin: 100 }));
 
     assert.equal(plan.amountMin, 100);
     assert.equal(plan.amountMax, null);
   });
-});
 
-describe('the amount condition', () => {
-  it('compares euros, falling back to the raw amount only for a EUR row without one', () => {
-    assert.equal(
-      buildAmountCondition('gte', 100),
-      'eur_amount.gte.100,and(eur_amount.is.null,currency.eq.EUR,amount.gte.100)',
-    );
-    assert.equal(
-      buildAmountCondition('lte', 12.5),
-      'eur_amount.lte.12.5,and(eur_amount.is.null,currency.eq.EUR,amount.lte.12.5)',
-    );
+  it('drops the bounds when no currency is selected', () => {
+    const plan = planFilterQuery(criteria({ amountMin: 100, amountMax: 250 }));
+
+    assert.equal(plan.amountMin, null);
+    assert.equal(plan.amountMax, null);
   });
 
-  it('keeps zero as a real bound', () => {
-    assert.match(buildAmountCondition('gte', 0), /^eur_amount\.gte\.0,/);
+  it('drops the bounds when several currencies are selected', () => {
+    const plan = planFilterQuery(
+      criteria({ currencies: ['EUR', 'USD'], amountMin: 100, amountMax: 250 }),
+    );
+
+    assert.equal(plan.amountMin, null);
+    assert.equal(plan.amountMax, null);
   });
 });
 
@@ -217,28 +218,20 @@ describe('the date bounds', () => {
   });
 });
 
-describe('split expansion', () => {
-  it('is off for all time', () => {
-    // With no period in scope there are no monthly slices to expand into, so a
-    // split source stays the single row it is.
-    assert.equal(planFilterQuery(criteria()).splitExpansion, null);
+describe('the search term', () => {
+  it('is null when the field is blank', () => {
+    assert.equal(planFilterQuery(criteria(), '   ').search, null);
   });
 
-  it('expands a month', () => {
-    assert.deepEqual(planFilterQuery(criteria({ year: 2026, month: 3 })).splitExpansion, {
-      year: 2026,
-      month: 3,
-    });
+  it('trims the term', () => {
+    assert.equal(planFilterQuery(criteria(), '  IOSYS  ').search, 'IOSYS');
   });
 
-  it('expands a year with no month', () => {
-    assert.deepEqual(planFilterQuery(criteria({ year: 2026 })).splitExpansion, {
-      year: 2026,
-      month: null,
-    });
-  });
+  it('combines with the other criteria', () => {
+    const plan = planFilterQuery(criteria({ year: 2026, currencies: ['EUR'] }), 'Dining');
 
-  it('is off when only a month is set, since there is no year to expand into', () => {
-    assert.equal(planFilterQuery(criteria({ month: 3 })).splitExpansion, null);
+    assert.equal(plan.search, 'Dining');
+    assert.notEqual(plan.dateBounds, null);
+    assert.deepEqual(plan.currencies, ['EUR']);
   });
 });

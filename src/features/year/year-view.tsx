@@ -3,12 +3,12 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 
 import { ChipStrip } from '@/components/chip-strip';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
-import { ListToolbar } from '@/features/transactions/components/list-toolbar';
-import { ViewTabs } from '@/features/transactions/components/view-tabs';
+import { ActivityControls } from '@/features/transactions/components/activity-controls';
 import {
   findYearIndex,
   useAvailableYears,
@@ -52,12 +52,13 @@ export function YearView({ year, onSelectYear }: YearViewProps) {
 
   return (
     <Screen>
-      <View style={styles.toolbar}>
-        <ListToolbar />
-      </View>
+      <ScreenHeader title="Activity" />
 
       <View style={styles.viewTabs}>
-        <ViewTabs value="year" onChange={(next) => next === 'month' && router.back()} />
+        <ActivityControls
+          value="year"
+          onChange={(next) => next === 'month' && router.back()}
+        />
       </View>
 
       <View style={styles.strip}>
@@ -305,12 +306,10 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  toolbar: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-  },
   viewTabs: {
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   strip: {
     paddingVertical: Spacing.two,

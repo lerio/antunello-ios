@@ -1,8 +1,8 @@
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { CategoryGlyph } from '@/components/category-icon';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -11,7 +11,6 @@ import { CategoryChart } from '@/features/category/category-chart';
 import { useCategoryTransactions } from '@/features/category/use-category-transactions';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
 import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
-import { symbolForCategory } from '@/lib/sf-symbols';
 import { useTheme } from '@/hooks/use-theme';
 import type { TimeRange } from '@/lib/query-keys';
 
@@ -64,11 +63,7 @@ export function CategoryView({ category, subCategory }: CategoryViewProps) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}>
         <View style={styles.heading}>
-          <SymbolView
-            name={symbolForCategory(category)}
-            size={22}
-            tintColor={theme.textSecondary}
-          />
+          <CategoryGlyph category={category} size={22} color={theme.textSecondary} />
           <View style={styles.headingText}>
             {subCategory ? (
               <Pressable

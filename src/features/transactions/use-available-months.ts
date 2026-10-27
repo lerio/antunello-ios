@@ -27,7 +27,7 @@ export type MonthOption = {
   date: Date;
   /** e.g. "September", or "September 2025" outside the current year. */
   label: string;
-  /** e.g. "Sep", or "Sep 25" outside the current year. */
+  /** Three letters on every chip; the strip marks the year separately. */
   shortLabel: string;
   isToday: boolean;
   isFuture: boolean;
@@ -105,7 +105,7 @@ function buildMonths(firstTransactionDate: string | null): MonthOption[] {
       month,
       date: new Date(year, cursor.getMonth(), 1),
       label: sameYear ? MONTH_NAMES[month - 1] : `${MONTH_NAMES[month - 1]} ${year}`,
-      shortLabel: sameYear ? MONTH_SHORT[month - 1] : `${MONTH_SHORT[month - 1]} ${String(year).slice(-2)}`,
+      shortLabel: MONTH_SHORT[month - 1],
       isToday: year === currentYear && month === currentMonth,
       isFuture: cursor > startOfCurrentMonth,
     });

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { CategoryGlyph } from '@/components/category-icon';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
@@ -11,7 +12,6 @@ import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { useBudgets, type BudgetWithProgress } from '@/features/budgets/use-budgets';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
-import { symbolForCategory } from '@/lib/sf-symbols';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -113,10 +113,10 @@ function BudgetCard({
         { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.7 : 1 },
       ]}>
       <View style={styles.cardHead}>
-        <SymbolView
-          name={symbolForCategory(budget.category)}
+        <CategoryGlyph
+          category={budget.category}
           size={17}
-          tintColor={theme.textSecondary}
+          color={theme.textSecondary}
         />
         <ThemedText style={styles.category} numberOfLines={1}>
           {budget.category}

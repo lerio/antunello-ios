@@ -2,6 +2,7 @@ import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { CategoryGlyph } from '@/components/category-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -16,7 +17,6 @@ import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { useTheme } from '@/hooks/use-theme';
 import { messageOf } from '@/lib/errors';
-import { symbolForCategory } from '@/lib/sf-symbols';
 
 /** `+1.234,56 €` / `-310,00 €` */
 function signed(amount: number): string {
@@ -189,10 +189,10 @@ export function AtAGlanceCard() {
                         styles.iconBubble,
                         { backgroundColor: theme.backgroundElement },
                       ]}>
-                      <SymbolView
-                        name={symbolForCategory(mover.mainCategory)}
+                      <CategoryGlyph
+                        category={mover.mainCategory}
                         size={16}
-                        tintColor={theme.textSecondary}
+                        color={theme.textSecondary}
                       />
                     </View>
                     <View style={styles.moverText}>
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.two,
   },
   iconBubble: {
     width: 32,

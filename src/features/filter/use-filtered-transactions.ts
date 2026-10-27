@@ -42,8 +42,10 @@ type FilteredTransactions = {
 export function useFilteredTransactions(
   criteria: FilterCriteria,
   enabled: boolean,
+  searchQuery = '',
 ): FilteredTransactions {
-  const hash = criteriaHash(criteria);
+  const search = searchQuery.trim();
+  const hash = `${criteriaHash(criteria)}|${search}`;
   const [debouncedHash, setDebouncedHash] = useState(hash);
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function useFilteredTransactions(
   const result = useQuery({
     queryKey: qk.filter(debouncedHash),
     enabled: active,
-    queryFn: () => fetchFilteredTransactions(criteria),
+    queryFn: () => fetchFilteredTransactions(criteria, search),
   });
 
   // As with search: a disabled query keeps the previous key's data as its

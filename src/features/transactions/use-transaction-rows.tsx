@@ -2,7 +2,10 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
 import type { Transaction } from '@/domain/types';
-import { TransactionRow } from '@/features/transactions/components/transaction-row';
+import {
+  TransactionRow,
+  TransactionRowCard,
+} from '@/features/transactions/components/transaction-row';
 import { isOptimisticId } from '@/features/transactions/mutations';
 
 /**
@@ -50,13 +53,25 @@ export function useTransactionRowNavigation() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Transaction }) => (
-      <TransactionRow
-        transaction={item}
-        onPress={openTransaction}
-        onCategoryPress={openCategory}
-        onSubCategoryPress={openSubCategory}
-      />
+    ({
+      item,
+      index,
+      section,
+    }: {
+      item: Transaction;
+      index: number;
+      section: { data: readonly Transaction[] };
+    }) => (
+      <TransactionRowCard
+        first={index === 0}
+        last={index === section.data.length - 1}>
+        <TransactionRow
+          transaction={item}
+          onPress={openTransaction}
+          onCategoryPress={openCategory}
+          onSubCategoryPress={openSubCategory}
+        />
+      </TransactionRowCard>
     ),
     [openTransaction, openCategory, openSubCategory],
   );

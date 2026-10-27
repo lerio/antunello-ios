@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -17,6 +17,10 @@ export type StripItem = {
   label: string;
   isToday: boolean;
   isFuture: boolean;
+  /** A non-selectable year divider, taking the same slot as a chip. */
+  isMarker?: boolean;
+  /** Spoken instead of the visible label, when the chip is abbreviated. */
+  accessibilityLabel?: string;
 };
 
 type ChipStripProps = {
@@ -85,14 +89,26 @@ export function ChipStrip({
       style={styles.scroller}
       contentContainerStyle={[styles.content, { paddingHorizontal: sidePadding }]}>
       {items.map((item, index) => {
+        // A year marker is a divider, not a destination: it keeps the same slot
+        // so the strip's centring arithmetic still sees one fixed stride.
+        if (item.isMarker) {
+          return (
+            <View
+              key={item.key}
+              style={styles.item}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants">
+              <ThemedText themeColor="textSecondary" style={styles.marker} numberOfLines={1}>
+                {item.label}
+              </ThemedText>
+            </View>
+          );
+        }
+
         const isSelected = index === selectedIndex;
 
-        // Selected wins over today, which wins over future.
-        const backgroundColor = isSelected
-          ? theme.text
-          : item.isToday
-            ? theme.backgroundSelected
-            : 'transparent';
+        // Selected wins over future; the dot below marks today separately.
+        const backgroundColor = isSelected ? theme.text : 'transparent';
 
         const labelColor = isSelected
           ? theme.background
@@ -106,13 +122,16 @@ export function ChipStrip({
             onPress={() => onSelect(index)}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={
-              accessibilityLabel ? `${accessibilityLabel}: ${item.label}` : item.label
-            }
+            accessibilityLabel={`${
+              item.accessibilityLabel ?? (accessibilityLabel ? `${accessibilityLabel}: ${item.label}` : item.label)
+            }${isSelected ? ', selected' : ''}`}
             style={[styles.item, { backgroundColor }]}>
             <ThemedText style={[styles.label, { color: labelColor }]} numberOfLines={1}>
               {item.label}
             </ThemedText>
+            {item.isToday ? (
+              <View style={[styles.todayDot, { backgroundColor: labelColor }]} />
+            ) : null}
           </Pressable>
         );
       })}
@@ -140,6 +159,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  marker: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  todayDot: {
+    position: 'absolute',
+    bottom: 5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.6,
   },
   empty: {
     fontSize: 13,

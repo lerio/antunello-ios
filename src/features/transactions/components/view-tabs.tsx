@@ -9,34 +9,44 @@ type ViewTabsProps = {
   onChange: (value: 'month' | 'year') => void;
 };
 
+const OPTIONS = [
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+] as const;
+
 /**
  * The Month / Year switch.
  *
- * Two segments rather than a native segmented control, because both are
- * navigation rather than a filter — and because the tab bar below already
- * carries the selection weight that a segmented control would compete with.
+ * A segmented control rather than two headings: the page title above already
+ * carries the heading weight, and a control that looks like text does not read
+ * as something tappable. The selected segment is the black pill the web app
+ * uses, which inverts in dark mode.
  */
 export function ViewTabs({ value, onChange }: ViewTabsProps) {
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundElement }]}>
-      {(['month', 'year'] as const).map((option) => {
-        const selected = option === value;
+    <View
+      style={[styles.container, { backgroundColor: theme.backgroundElement }]}
+      accessibilityRole="tablist"
+      accessibilityLabel="Transaction view">
+      {OPTIONS.map((option) => {
+        const selected = option.value === value;
         return (
           <Pressable
-            key={option}
-            onPress={() => onChange(option)}
-            accessibilityRole="button"
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            hitSlop={4}
+            accessibilityRole="tab"
             accessibilityState={{ selected }}
-            accessibilityLabel={option === 'month' ? 'Month view' : 'Year view'}
-            style={[styles.segment, selected && { backgroundColor: theme.card }]}>
+            accessibilityLabel={option.value === 'month' ? 'Month view' : 'Year view'}
+            style={[styles.segment, selected && { backgroundColor: theme.text }]}>
             <ThemedText
               style={[
                 styles.label,
-                { color: selected ? theme.text : theme.textSecondary },
+                { color: selected ? theme.background : theme.textSecondary },
               ]}>
-              {option === 'month' ? 'Month' : 'Year'}
+              {option.label}
             </ThemedText>
           </Pressable>
         );
@@ -48,7 +58,6 @@ export function ViewTabs({ value, onChange }: ViewTabsProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignSelf: 'center',
     borderRadius: Radius.small + 1,
     padding: 2,
   },

@@ -1,5 +1,6 @@
-import { SymbolView } from 'expo-symbols';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -20,10 +21,22 @@ type ScreenHeaderProps = {
  */
 export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { enabled, toggle } = usePrivacy();
 
   return (
-    <View style={[styles.header, { borderBottomColor: theme.separator }]}>
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: theme.header,
+          borderBottomColor: theme.separator,
+          // Screen reserves the status-bar inset above us; pull the header up
+          // over it so the bar's colour continues behind the status bar.
+          marginTop: -insets.top,
+          paddingTop: insets.top + Spacing.one,
+        },
+      ]}>
       <View style={styles.text}>
         <ThemedText
           accessibilityRole="header"
@@ -47,11 +60,11 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
         accessibilityRole="button"
         accessibilityLabel={enabled ? 'Show balances' : 'Hide balances'}
         style={[styles.action, { backgroundColor: theme.backgroundElement }]}>
-        <SymbolView
-          name={enabled ? 'eye.slash' : 'eye'}
-          size={17}
-          tintColor={theme.text}
-        />
+        {enabled ? (
+          <EyeOff size={18} color={theme.text} strokeWidth={2} />
+        ) : (
+          <Eye size={18} color={theme.text} strokeWidth={2} />
+        )}
       </Pressable>
     </View>
   );
@@ -63,7 +76,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.one,
     paddingBottom: Spacing.two + 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },

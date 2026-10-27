@@ -4,7 +4,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
-import { applyThemePreference, readThemePreference } from '@/features/appearance/appearance';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
 import { RemoteChangeBanner } from '@/features/sync/remote-change-banner';
@@ -12,10 +11,6 @@ import { persistOptions, queryClient } from '@/lib/query-client';
 import { runRuntimeChecks } from '@/lib/runtime-check';
 
 SplashScreen.preventAutoHideAsync();
-
-// Before the first render, so a forced light or dark theme never flashes the
-// system one. The read is synchronous and cannot throw.
-applyThemePreference(readThemePreference());
 
 /**
  * Root layout.

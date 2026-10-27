@@ -37,6 +37,8 @@ export type FilterPlan = {
   amountMax: number | null;
   /** Currencies to match, or null for no constraint. */
   currencies: string[] | null;
+  /** Text matched against title and categories, or null for no constraint. */
+  search: string | null;
   /**
    * Half-open date bounds, or null for all time.
    *
@@ -44,13 +46,6 @@ export type FilterPlan = {
    * end of "January 1st" would drop everything recorded later that day.
    */
   dateBounds: { start: string; end: string } | null;
-  /**
-   * How split-across-year rows should be expanded, or null to leave them alone.
-   *
-   * A split source is stored once and drawn down over twelve months, so it only
-   * has monthly slices to show when a month or year is in scope.
-   */
-  splitExpansion: { year: number; month: number | null } | null;
 };
 
 /**
@@ -83,7 +78,7 @@ function buildTypeConditions(types: FilterCriteria['types']): string[] | null {
  * @param criteria The filter criteria.
  * @returns The plan the fetcher applies.
  */
-export function planFilterQuery(criteria: FilterCriteria): FilterPlan {
+export function planFilterQuery(criteria: FilterCriteria, searchQuery = ''): FilterPlan {
   const { year, month } = criteria;
 
   let dateBounds: FilterPlan['dateBounds'] = null;
@@ -102,6 +97,10 @@ export function planFilterQuery(criteria: FilterCriteria): FilterPlan {
     };
   }
 
+  // The amount range is only offered for a single currency, and is in that
+  // currency's face value. A stale bound must not narrow a multi-currency query.
+  const amountCurrency = criteria.currencies.length === 1 ? criteria.currencies[0] : null;
+
   return {
     typeConditions: buildTypeConditions(criteria.types),
     mainCategories: criteria.mainCategories.length > 0 ? criteria.mainCategories : null,
@@ -113,14 +112,11 @@ export function planFilterQuery(criteria: FilterCriteria): FilterPlan {
         : null,
     funds:
       criteria.fundSourceIds.length > 0 ? { ids: criteria.fundSourceIds } : null,
-    amountMin: criteria.amountMin,
-    amountMax: criteria.amountMax,
+    amountMin: amountCurrency === null ? null : criteria.amountMin,
+    amountMax: amountCurrency === null ? null : criteria.amountMax,
     currencies: criteria.currencies.length > 0 ? criteria.currencies : null,
+    search: searchQuery.trim() || null,
     dateBounds,
-    // A month and a year expand month-by-month; a year alone expands the whole
-    // year; all time leaves sources as the single rows they are.
-    splitExpansion:
-      year === null ? null : { year, month: month === null ? null : month },
   };
 }
 
@@ -139,18 +135,3 @@ export function buildFundCondition(funds: FundCondition): string {
   return `fund_category_id.in.(${ids}),and(is_money_transfer.eq.true,target_fund_category_id.in.(${ids}))`;
 }
 
-/**
- * The PostgREST `or` expression for one end of the amount range.
- *
- * The range is in euros, as the filter's label says: a ¥10,000 purchase is about
- * €60 and must not match "over 100". It compares `eur_amount`, falling back to
- * `amount` only for a EUR row that somehow has no `eur_amount`. A non-EUR row
- * with no conversion cannot be placed in the range, so it is left out rather
- * than compared in a different currency.
- *
- * @param bound `gte` for the minimum, `lte` for the maximum.
- * @param value The bound, in euros.
- */
-export function buildAmountCondition(bound: 'gte' | 'lte', value: number): string {
-  return `eur_amount.${bound}.${value},and(eur_amount.is.null,currency.eq.EUR,amount.${bound}.${value})`;
-}

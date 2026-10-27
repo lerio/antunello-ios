@@ -221,7 +221,7 @@ export function useAddTransaction() {
       if (context) queryClient.setQueryData(context.key, context.previous);
     },
 
-    onSettled: (_data, _error, input) => {
+    onSettled: (_data, _error) => {
       invalidateAfterWrite(queryClient);
     },
   });

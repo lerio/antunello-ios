@@ -131,11 +131,16 @@ describe('pruning subcategories when the type changes', () => {
 
   it('keeps subcategories that are still reachable', () => {
     const next = filterReducer(
-      criteria({ types: ['income', 'expense'], subCategories: ['Dining::Restaurants'] }),
+      criteria({
+        types: ['income', 'expense'],
+        mainCategories: ['Dining'],
+        subCategories: ['Dining::Restaurants'],
+      }),
       { type: 'toggleType', value: 'income' },
     );
 
     assert.deepEqual(next.types, ['expense']);
+    assert.deepEqual(next.mainCategories, ['Dining']);
     assert.deepEqual(next.subCategories, ['Dining::Restaurants']);
   });
 
@@ -201,15 +206,28 @@ describe('pruning subcategories when a main category changes', () => {
     assert.deepEqual(next.subCategories, ['Dining::Restaurants']);
   });
 
-  it('keeps every subcategory when the last category is deselected', () => {
-    // An empty category selection means "every category", so nothing is
-    // unreachable and the subcategory selection survives.
+  it('clears subcategories when the last category is deselected', () => {
+    // With no category selected the subcategory control is hidden, so keeping
+    // its value would leave an invisible filter behind.
     const next = filterReducer(
       criteria({ mainCategories: ['Dining'], subCategories: ['Groceries::Supermarket'] }),
       { type: 'toggleMainCategory', value: 'Dining' },
     );
 
-    assert.deepEqual(next.subCategories, ['Groceries::Supermarket']);
+    assert.deepEqual(next.subCategories, []);
+  });
+});
+
+describe('the currency selection', () => {
+  it('clears the amount range when the currency changes', () => {
+    const next = filterReducer(
+      criteria({ currencies: ['EUR'], amountMin: 10, amountMax: 100 }),
+      { type: 'toggleCurrency', value: 'USD' },
+    );
+
+    assert.deepEqual(next.currencies, ['EUR', 'USD']);
+    assert.equal(next.amountMin, null);
+    assert.equal(next.amountMax, null);
   });
 });
 

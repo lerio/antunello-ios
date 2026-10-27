@@ -1,11 +1,25 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { RefreshControl, SectionList, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  RefreshControl,
+  SectionList,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AddTransactionButton } from '@/components/add-transaction-button';
+import {
+  AddTransactionButton,
+  FLOATING_BUTTON_SIZE,
+  ScrollToTopButton,
+} from '@/components/floating-buttons';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { SkeletonRows } from '@/components/skeleton';
+import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
 import { DayHeader } from '@/features/transactions/components/day-header';
@@ -13,9 +27,8 @@ import { MonthSummaryCard } from '@/features/transactions/components/month-summa
 import { useMonthSummary } from '@/features/transactions/use-month-summary';
 import { usePrefetchAdjacentMonths } from '@/features/transactions/use-adjacent-prefetch';
 import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
-import { ListToolbar } from '@/features/transactions/components/list-toolbar';
+import { ActivityControls } from '@/features/transactions/components/activity-controls';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
-import { ViewTabs } from '@/features/transactions/components/view-tabs';
 import type { DayGroup } from '@/features/transactions/group-by-day';
 import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
 import {
@@ -34,6 +47,7 @@ import {
 export function MonthView() {
   const { year, month } = usePeriodParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const { months } = useAvailableMonths();
   const { days, transactions, isLoading, isError, error, refresh } = useMonthTransactions(year, month);
@@ -47,6 +61,17 @@ export function MonthView() {
   // SectionList wants each section to carry its own `data`, so the day's totals
   // and its transactions are flattened into one object.
   const sections = useMemo(() => days.map((day) => ({ ...day, data: day.transactions })), [days]);
+
+  const listRef = useRef<SectionList<Transaction, DayGroup>>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setShowScrollTop(event.nativeEvent.contentOffset.y > 300);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: true });
+  }, []);
 
   const handleSelectMonth = useCallback(
     (option: MonthOption) => {
@@ -66,12 +91,13 @@ export function MonthView() {
 
   return (
     <Screen>
-      <View style={styles.toolbar}>
-        <ListToolbar />
-      </View>
+      <ScreenHeader title="Activity" />
 
       <View style={styles.viewTabs}>
-        <ViewTabs value="month" onChange={(next) => next === 'year' && router.push('/transactions/year')} />
+        <ActivityControls
+          value="month"
+          onChange={(next) => next === 'year' && router.push('/transactions/year')}
+        />
       </View>
 
       <View style={styles.strip}>
@@ -79,17 +105,24 @@ export function MonthView() {
       </View>
 
       {isLoading && days.length === 0 ? (
-        <SkeletonRows count={8} />
+        <SkeletonRows count={3} />
       ) : (
         <SectionList
+          ref={listRef}
           sections={sections}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           renderSectionHeader={renderSectionHeader}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           // On iOS this defaults to true, which is what pins the day headers
           // while their transactions scroll past.
           stickySectionHeadersEnabled
-          ListHeaderComponent={summary && !isError ? <MonthSummaryCard summary={summary} /> : null}
+          ListHeaderComponent={
+            summary && !isError ? (
+              <MonthSummaryCard summary={summary} year={year} month={month} />
+            ) : null
+          }
           refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
           ListEmptyComponent={
             isError ? (
@@ -98,13 +131,30 @@ export function MonthView() {
                 detail={error instanceof Error ? error.message : 'Unknown error'}
               />
             ) : (
-              <EmptyState title="Nothing here" detail="No transactions in this month." />
+              <ThemedText themeColor="textSecondary" style={styles.emptyText}>
+                {`No transactions in ${new Date(year, month - 1, 1).toLocaleDateString(
+                  'en-GB',
+                  { month: 'long' },
+                )}`}
+              </ThemedText>
             )
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            {
+              // Clear the stacked scroll-to-top button, whose bottom edge is
+              // the highest piece of floating chrome.
+              paddingBottom:
+                insets.bottom +
+                Spacing.three +
+                FLOATING_BUTTON_SIZE +
+                Spacing.three,
+            },
+          ]}
         />
       )}
 
+      {showScrollTop ? <ScrollToTopButton onPress={scrollToTop} /> : null}
       <AddTransactionButton onPress={() => router.push('/transaction/new')} />
     </Screen>
   );
@@ -129,12 +179,10 @@ function usePeriodParams() {
 
 
 const styles = StyleSheet.create({
-  toolbar: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-  },
   viewTabs: {
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   strip: {
     paddingVertical: Spacing.two,
@@ -142,5 +190,10 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingBottom: Spacing.five,
+  },
+  emptyText: {
+    textAlign: 'center',
+    paddingVertical: Spacing.five,
+    fontSize: 13,
   },
 });

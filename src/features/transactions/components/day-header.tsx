@@ -1,4 +1,5 @@
 import { SymbolView } from 'expo-symbols';
+import { EyeOff } from 'lucide-react-native';
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -33,7 +34,12 @@ type DayHeaderProps = {
  */
 export const DayHeader = memo(function DayHeader({ day, showYear = false }: DayHeaderProps) {
   const theme = useTheme();
-  const isPositive = day.dailyTotal >= 0;
+  const totalColor =
+    day.dailyTotal === 0
+      ? theme.textSecondary
+      : day.dailyTotal > 0
+        ? theme.income
+        : theme.expense;
 
   return (
     <View
@@ -46,20 +52,28 @@ export const DayHeader = memo(function DayHeader({ day, showYear = false }: DayH
           {showYear ? formatDateHeaderWithYear(day.isoDate) : formatDateHeader(day.isoDate)}
         </ThemedText>
         {day.hiddenCount > 0 ? (
-          <SymbolView name="eye.slash" size={12} tintColor={theme.textSecondary} />
+          <EyeOff size={12} color={theme.textSecondary} strokeWidth={2} />
         ) : null}
       </View>
 
       <View style={[styles.side, styles.totals]}>
         <PrivacyValue
-          style={[styles.dayTotal, { color: isPositive ? theme.income : theme.expense }]}
+          style={[styles.dayTotal, { color: totalColor }]}
           numberOfLines={1}>
-          {formatCurrency(Math.abs(day.dailyTotal), 'EUR')}
+          {`${day.dailyTotal > 0 ? '+' : ''}${formatCurrency(Math.abs(day.dailyTotal), 'EUR')}`}
         </PrivacyValue>
 
         {day.dailySplitTotal !== 0 ? (
-          <View style={styles.splitTotal}>
-            <SymbolView name="arrow.triangle.branch" size={11} tintColor={theme.textSecondary} />
+          <View
+            style={[styles.splitChip, { backgroundColor: theme.backgroundElement }]}>
+            <SymbolView
+              name="arrow.triangle.branch"
+              size={11}
+              tintColor={theme.textSecondary}
+            />
+            <ThemedText themeColor="textSecondary" style={styles.splitChipLabel}>
+              Split ·
+            </ThemedText>
             <PrivacyValue themeColor="textSecondary" style={styles.daySplit} numberOfLines={1}>
               {formatCurrency(Math.abs(day.dailySplitTotal), 'EUR')}
             </PrivacyValue>
@@ -77,7 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.two + Spacing.one,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   side: {
@@ -89,21 +103,31 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   dayLabel: {
-    fontSize: 13,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '600',
   },
   dayTotal: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
-  splitTotal: {
+  splitChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    paddingHorizontal: Spacing.one + 2,
+    paddingVertical: Spacing.half,
+    borderRadius: 99,
+  },
+  splitChipLabel: {
+    fontSize: 12,
+    lineHeight: 14,
   },
   daySplit: {
     fontSize: 12,
+    lineHeight: 14,
     fontVariant: ['tabular-nums'],
   },
 });

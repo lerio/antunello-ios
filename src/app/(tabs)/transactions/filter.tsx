@@ -1,12 +1,9 @@
-import { FilterView } from '@/features/filter/filter-view';
+import { Redirect } from 'expo-router';
 
 /**
- * Advanced filtering.
- *
- * A pushed screen beside search, and its own destination rather than a mode of
- * the month list: the criteria are assembled in the moment and discarded on the
- * way out, which is the opposite of how the month view treats its period.
+ * Filtering now lives on the search screen; keep old links working by opening
+ * it with the filter sheet already up.
  */
 export default function FilterScreen() {
-  return <FilterView />;
+  return <Redirect href="/transactions/search?filters=1" />;
 }

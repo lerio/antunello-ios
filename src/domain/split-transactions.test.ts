@@ -128,6 +128,14 @@ describe('split slices sum exactly to the source amount', () => {
     assert.ok(first > second, 'first month must absorb the remainder');
   });
 
+  it('matches SQL at a half-cent split', () => {
+    // 864.30 / 12 = 72.025 and 819.30 / 12 = 68.275. The database's numeric
+    // round() goes up; a float `Math.round(72.025 * 100)` goes down.
+    assert.equal(getRoundedSplitAmountForMonth(864.3, 5, 4, 2), 72.03);
+    assert.equal(getRoundedSplitAmountForMonth(864.3, 4, 4, 2), 71.97);
+    assert.equal(getRoundedSplitAmountForMonth(819.3, 7, 6, 2), 68.28);
+  });
+
   it('treats yen as indivisible, with the remainder in the first month', () => {
     const digits = getCurrencyFractionDigits('JPY');
     const first = getRoundedSplitAmountForMonth(1000, 11, 11, digits);

@@ -1,7 +1,7 @@
 /**
  * @vendored-from antunello-app:constants/app-constants.ts
  * @upstream-sha256 bfab7e4e58b1d740703fe3c10e5f113b2409c11f208fc68afaa6669a8ef4d5b7
- * @vendored-on 2026-10-19
+ * @vendored-on 2026-10-27
  * @parity exact
  * @divergences none
  *
