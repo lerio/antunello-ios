@@ -17,6 +17,8 @@ type MonthPaceRow = {
   month_start: string;
   as_of_date: string;
   spent_to_date: number;
+  // Absent until migration 025 has been applied.
+  split_spent_to_date?: number | null;
   net_to_date: number;
   prev_month_net_to_day: number | null;
   typical_spent_to_date: number | null;
@@ -27,6 +29,8 @@ type MonthPace = {
   monthStart: string;
   asOfDate: string;
   spentToDate: number;
+  /** The split-across-year share of those expenses. */
+  splitSpentToDate: number;
   netToDate: number;
   prevMonthNetToDay: number | null;
   typicalSpentToDate: number | null;
@@ -77,16 +81,22 @@ async function currentUserId(): Promise<string | null> {
 
 /** The current month's spending, pace and comparisons. */
 export function useMonthPace() {
+  const timeZone = deviceTimeZone();
+  const today = localToday(timeZone);
+  // The RPC resolves the month from `p_month`, so the cache key carries it. A
+  // fixed key let the persisted entry from the previous month be served as
+  // this month's figures until a refetch completed.
+  const monthKey = today.slice(0, 7);
+
   return useQuery({
-    queryKey: qk.monthPace(),
+    queryKey: [...qk.monthPace(), monthKey],
     queryFn: async (): Promise<MonthPace | null> => {
       const userId = await currentUserId();
       if (!userId) return null;
 
-      const timeZone = deviceTimeZone();
       const { data, error } = await supabase.rpc('get_month_pace', {
         p_user_id: userId,
-        p_month: localToday(timeZone),
+        p_month: today,
         p_tz: timeZone,
       });
 
@@ -99,6 +109,7 @@ export function useMonthPace() {
         monthStart: row.month_start,
         asOfDate: row.as_of_date,
         spentToDate: Number(row.spent_to_date) || 0,
+        splitSpentToDate: Number(row.split_spent_to_date) || 0,
         netToDate: Number(row.net_to_date) || 0,
         prevMonthNetToDay:
           row.prev_month_net_to_day === null ? null : Number(row.prev_month_net_to_day),

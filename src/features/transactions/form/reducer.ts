@@ -34,6 +34,7 @@ import {
 } from '@/domain/form-validation';
 import { generateTransferTitle } from '@/domain/money-transfer-validation';
 import { getCategoryType, type TitleSuggestion } from '@/domain/types';
+import { roundToMinuteInterval } from '@/features/transactions/form/minute-interval';
 
 /** The category that represents a movement between the user's own funds. */
 export const MONEY_TRANSFER_CATEGORY = 'Money Transfer';
@@ -115,7 +116,10 @@ export function initialFormState(mode: FormMode = 'add'): FormState {
     title: '',
     mainCategory: '',
     subCategory: '',
-    date: new Date(),
+    // A new transaction starts on the quarter hour, which is the grid the
+    // picker offers. Edit and pending states overwrite this with the row's own
+    // time, so an imported 14:07 is not moved just by opening it.
+    date: roundToMinuteInterval(new Date()),
     hideFromTotals: false,
     splitAcrossYear: false,
     sourceFund: null,

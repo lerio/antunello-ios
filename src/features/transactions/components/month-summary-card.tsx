@@ -17,11 +17,11 @@ type MonthSummaryCardProps = {
   month: number;
 };
 
-/** `Net so far this month` for the current month, `Net · October` otherwise. */
+/** `Net · This month` for the current month, `Net · October` otherwise. */
 function periodTitle(year: number, month: number): string {
   const now = new Date();
   if (year === now.getFullYear() && month === now.getMonth() + 1) {
-    return 'Net so far this month';
+    return 'Net · This month';
   }
   const name = new Date(year, month - 1, 1).toLocaleDateString('en-GB', {
     month: 'long',
@@ -33,9 +33,10 @@ function periodTitle(year: number, month: number): string {
  * The month's net result, collapsed by default.
  *
  * The hero is income minus expenses, signed and coloured by sign; the split
- * amount is a labelled chip. Expanding reveals the previous-month comparison,
- * then Income and Expenses (each expandable into categories) and the hidden
- * total. Every figure is an aggregate, so privacy mode covers all of them.
+ * total and its not-yet-visible remainder sit under it in the home card's
+ * row style. Expanding reveals the previous-month comparison, then Income and
+ * Expenses (each expandable into categories) and the hidden total. Every figure
+ * is an aggregate, so privacy mode covers all of them.
  */
 export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps) {
   const theme = useTheme();
@@ -49,52 +50,59 @@ export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps
       : summary.balance > 0
         ? theme.income
         : theme.textSecondary;
-  const signedBalance = `${summary.balance < 0 ? '−' : summary.balance > 0 ? '+' : ''}${formatCurrency(
-    Math.abs(summary.balance),
-    'EUR',
-  )}`;
+  // The colour carries the sign; the figure itself is always the magnitude.
+  const signedBalance = formatCurrency(Math.abs(summary.balance), 'EUR');
   const { comparison } = summary;
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
-      <Pressable
-        onPress={() => setExpanded((value) => !value)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        accessibilityLabel={expanded ? 'Collapse summary' : 'Expand summary'}
-        style={styles.header}>
+      <View style={styles.header}>
         <ThemedText themeColor="textSecondary" style={styles.label} numberOfLines={1}>
           {periodTitle(year, month)}
         </ThemedText>
-        <SymbolView
-          name={expanded ? 'chevron.up' : 'chevron.down'}
-          size={12}
-          tintColor={theme.textSecondary}
-        />
-      </Pressable>
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel={expanded ? 'Collapse summary' : 'Expand summary'}
+          style={styles.toggle}>
+          <SymbolView
+            name={expanded ? 'chevron.up' : 'chevron.down'}
+            size={13}
+            tintColor={theme.textSecondary}
+          />
+        </Pressable>
+      </View>
 
       <View style={styles.heroRow}>
         <PrivacyValue style={[styles.hero, { color: tone }]} numberOfLines={1}>
           {signedBalance}
         </PrivacyValue>
+      </View>
 
-        {summary.expectedSplitAmountEur > 0 ? (
-          <View
-            style={[styles.splitChip, { backgroundColor: theme.backgroundElement }]}>
-            <SymbolView
-              name="arrow.triangle.branch"
-              size={11}
-              tintColor={theme.textSecondary}
-            />
-            <ThemedText themeColor="textSecondary" style={styles.splitLabel}>
-              Split ·
+      {summary.totalSplitAmountEur > 0 ? (
+        <View style={styles.breakdown}>
+          <View style={styles.breakdownRow}>
+            <ThemedText themeColor="textSecondary" style={styles.breakdownLabel}>
+              Total split
             </ThemedText>
-            <PrivacyValue themeColor="textSecondary" style={styles.splitAmount}>
-              {formatCurrency(summary.expectedSplitAmountEur, 'EUR')}
+            <PrivacyValue style={styles.breakdownValue}>
+              {formatCurrency(summary.totalSplitAmountEur, 'EUR')}
             </PrivacyValue>
           </View>
-        ) : null}
-      </View>
+          {summary.expectedSplitAmountEur > 0 ? (
+            <View style={styles.breakdownRow}>
+              <ThemedText themeColor="textSecondary" style={styles.breakdownLabel}>
+                Remaining
+              </ThemedText>
+              <PrivacyValue style={styles.breakdownValue}>
+                {formatCurrency(summary.expectedSplitAmountEur, 'EUR')}
+              </PrivacyValue>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       {expanded ? (
         <View style={[styles.body, { borderTopColor: theme.separator }]}>
@@ -263,8 +271,28 @@ const styles = StyleSheet.create({
   },
   label: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  toggle: {
+    padding: Spacing.two,
+  },
+  breakdown: {
+    gap: 2,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  breakdownLabel: {
+    fontSize: 12,
+  },
+  breakdownValue: {
+    fontSize: 14,
     fontWeight: '500',
+    fontVariant: ['tabular-nums'],
   },
   heroRow: {
     flexDirection: 'row',
@@ -273,24 +301,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   hero: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 32,
+    lineHeight: 38,
     fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-  },
-  splitChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
-    borderRadius: 99,
-  },
-  splitLabel: {
-    fontSize: 12,
-  },
-  splitAmount: {
-    fontSize: 12,
     fontVariant: ['tabular-nums'],
   },
   body: {

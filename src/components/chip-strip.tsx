@@ -8,7 +8,7 @@ import { useTheme } from '@/hooks/use-theme';
 /** Chip width and the gap between chips, which together form the scroll stride. */
 const ITEM_WIDTH = 78;
 const ITEM_GAP = Spacing.one;
-const CHIP_HEIGHT = 36;
+const CHIP_HEIGHT = 34;
 
 export type StripItem = {
   /** Stable identity, used as the React key. */
@@ -151,13 +151,13 @@ const styles = StyleSheet.create({
   item: {
     width: ITEM_WIDTH,
     height: CHIP_HEIGHT,
-    borderRadius: Radius.large,
+    borderRadius: Radius.small,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.two,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   marker: {

@@ -176,8 +176,15 @@ export async function fetchMonthTransactions(
 
   const splitSources = await fetchSplitSources(year);
 
+  // Split instances keep the source's time of day, while the home RPC counts
+  // by date. Cap at the end of today, not the current instant: a slice dated
+  // today at 14:00 belongs to Home's month-to-date figure from the start of
+  // the day, and dropping it here made the list and the summary disagree.
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
   return sortTransactionsByDateInPlace(
-    expandSplitTransactionsForMonth(data ?? [], splitSources, year, month),
+    expandSplitTransactionsForMonth(data ?? [], splitSources, year, month, endOfToday),
   );
 }
 
@@ -228,5 +235,10 @@ export async function fetchYearTransactions(year: number): Promise<Transaction[]
 
   const all = [...yearTransactions, ...previousYearSplitSources];
 
-  return sortTransactionsByDateInPlace(expandSplitTransactionsForYear(all, year));
+  // Same end-of-today rule as the month fetch: the home RPC counts by date,
+  // so a split slice dated later today must not be dropped from the year.
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  return sortTransactionsByDateInPlace(expandSplitTransactionsForYear(all, year, endOfToday));
 }

@@ -39,7 +39,7 @@ export function MonthStrip({ months, selectedIndex, onSelect }: MonthStripProps)
 
       stripItems.push({
         key: `${month.year}-${month.month}`,
-        label: month.shortLabel,
+        label: month.shortLabel.toUpperCase(),
         accessibilityLabel: month.label.includes(String(month.year))
           ? month.label
           : `${month.label} ${month.year}`,

@@ -95,7 +95,7 @@ export function AtAGlanceCard() {
           accessibilityRole="header"
           themeColor="textSecondary"
           style={styles.sectionLabel}>
-          THIS MONTH
+          SPENT THIS MONTH
         </ThemedText>
         <Pressable
           onPress={() => setDetailOpen((open) => !open)}
@@ -143,9 +143,27 @@ export function AtAGlanceCard() {
               </View>
             ) : null}
           </View>
-          <ThemedText themeColor="textSecondary" style={styles.caption}>
-            spent so far
-          </ThemedText>
+          <View style={styles.breakdown}>
+            <View style={styles.breakdownRow}>
+              <ThemedText themeColor="textSecondary" style={styles.breakdownLabel}>
+                Normal expenses
+              </ThemedText>
+              <PrivacyValue style={styles.breakdownValue}>
+                {formatCurrency(
+                  Math.max(0, pace.spentToDate - pace.splitSpentToDate),
+                  'EUR',
+                )}
+              </PrivacyValue>
+            </View>
+            <View style={styles.breakdownRow}>
+              <ThemedText themeColor="textSecondary" style={styles.breakdownLabel}>
+                Split transactions
+              </ThemedText>
+              <PrivacyValue style={styles.breakdownValue}>
+                {formatCurrency(pace.splitSpentToDate, 'EUR')}
+              </PrivacyValue>
+            </View>
+          </View>
 
           {hasPace ? (
             <View style={styles.pace}>
@@ -302,8 +320,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
-  caption: {
+  breakdown: {
+    gap: 2,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  breakdownLabel: {
     fontSize: 12,
+  },
+  breakdownValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    fontVariant: ['tabular-nums'],
   },
   pace: {
     marginTop: Spacing.one,

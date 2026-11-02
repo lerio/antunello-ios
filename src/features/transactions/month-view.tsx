@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   RefreshControl,
@@ -10,32 +11,32 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import {
   AddTransactionButton,
-  FLOATING_BUTTON_SIZE,
-  ScrollToTopButton,
+  ScrollToTopButton
 } from '@/components/floating-buttons';
-import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { SkeletonRows } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Transaction } from '@/domain/types';
-import { DayHeader } from '@/features/transactions/components/day-header';
-import { MonthSummaryCard } from '@/features/transactions/components/month-summary-card';
-import { useMonthSummary } from '@/features/transactions/use-month-summary';
-import { usePrefetchAdjacentMonths } from '@/features/transactions/use-adjacent-prefetch';
-import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 import { ActivityControls } from '@/features/transactions/components/activity-controls';
+import { DayHeader } from '@/features/transactions/components/day-header';
 import { MonthStrip } from '@/features/transactions/components/month-strip';
+import { MonthSummaryCard } from '@/features/transactions/components/month-summary-card';
 import type { DayGroup } from '@/features/transactions/group-by-day';
-import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
+import { usePrefetchAdjacentMonths } from '@/features/transactions/use-adjacent-prefetch';
 import {
   findMonthIndex,
   useAvailableMonths,
   type MonthOption,
 } from '@/features/transactions/use-available-months';
+import { useMonthSummary } from '@/features/transactions/use-month-summary';
+import { useMonthTransactions } from '@/features/transactions/use-month-transactions';
+import { TX } from '@/lib/query-keys';
+import { useTransactionRowNavigation } from '@/features/transactions/use-transaction-rows';
 
 /**
  * The month's transactions.
@@ -49,8 +50,22 @@ export function MonthView() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const queryClient = useQueryClient();
   const { months } = useAvailableMonths();
-  const { days, transactions, isLoading, isError, error, refresh } = useMonthTransactions(year, month);
+  const { days, transactions, isLoading, isError, error, refresh: refreshMonth } =
+    useMonthTransactions(year, month);
+
+  /**
+   * Pull-to-refresh. The list refetches its own split sources, but the summary
+   * keeps them in separate queries, so without this a new split slice would
+   * reach the list and Home's SQL figures but not the summary's split badge.
+   */
+  const refresh = useCallback(async () => {
+    await Promise.all([
+      refreshMonth(),
+      queryClient.invalidateQueries({ queryKey: [TX, 'split-sources'] }),
+    ]);
+  }, [refreshMonth, queryClient]);
 
   usePrefetchAdjacentMonths(year, month, !isLoading && !isError);
 
@@ -142,13 +157,9 @@ export function MonthView() {
           contentContainerStyle={[
             styles.listContent,
             {
-              // Clear the stacked scroll-to-top button, whose bottom edge is
-              // the highest piece of floating chrome.
-              paddingBottom:
-                insets.bottom +
-                Spacing.three +
-                FLOATING_BUTTON_SIZE +
-                Spacing.three,
+              // The add button floats over the end of the list, so the last row
+              // stops just above it rather than leaving an extra gap.
+              paddingBottom: insets.bottom,
             },
           ]}
         />

@@ -171,7 +171,9 @@ describe('month summary', () => {
       splitSources: [source],
     });
 
-    // The source is not among the visible rows, so its monthly slice is expected.
-    assert.ok(summary.expectedSplitAmountEur > 0);
+    // The source is not among the visible rows, so its monthly slice is
+    // expected. The total is the whole slice either way.
+    assert.equal(summary.totalSplitAmountEur, 100);
+    assert.equal(summary.expectedSplitAmountEur, 100);
   });
 });

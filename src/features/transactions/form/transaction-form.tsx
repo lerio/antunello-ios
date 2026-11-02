@@ -1,36 +1,30 @@
-import { SymbolView } from 'expo-symbols';
 import { Stack } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PickerSheet, type PickerOption } from '@/components/picker-sheet';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { hasValidationErrors } from '@/domain/form-validation';
-import { messageOf } from '@/lib/errors';
-import { hapticError, hapticSuccess } from '@/lib/haptics';
 import {
   CATEGORIES_WITH_TYPES,
   SUB_CATEGORIES,
   type FundCategory,
 } from '@/domain/types';
 import { useFunds } from '@/features/funds/use-funds';
-import {
-  useAddTransaction,
-  useDeleteTransaction,
-  useUpdateTransaction,
-  type TransactionInput,
-} from '@/features/transactions/mutations';
 import { DateField } from '@/features/transactions/form/date-field';
 import {
   MONEY_TRANSFER_CATEGORY,
@@ -42,10 +36,25 @@ import {
 } from '@/features/transactions/form/reducer';
 import { toInput } from '@/features/transactions/form/to-input';
 import { useTitleSuggestions } from '@/features/transactions/form/use-title-suggestions';
+import {
+  useAddTransaction,
+  useDeleteTransaction,
+  useUpdateTransaction,
+  type TransactionInput,
+} from '@/features/transactions/mutations';
 import { useTheme } from '@/hooks/use-theme';
+import { messageOf } from '@/lib/errors';
+import { hapticError, hapticSelect, hapticSuccess } from '@/lib/haptics';
 
 /** Which sheet is open, if any. */
-type OpenPicker = 'currency' | 'mainCategory' | 'subCategory' | 'sourceFund' | 'targetFund' | null;
+type OpenPicker =
+  | 'currency'
+  | 'fund'
+  | 'mainCategory'
+  | 'subCategory'
+  | 'sourceFund'
+  | 'targetFund'
+  | null;
 
 type TransactionFormProps = {
   state: FormState;
@@ -66,14 +75,22 @@ type TransactionFormProps = {
   /** Label for the submit button; defaults to the add/update wording. */
   submitLabel?: string;
   /**
-   * Replaces the Cancel button, and skips the "discard?" confirmation.
+   * Shows a Skip action in the header for a bank import being reviewed.
    *
-   * Skipping a bank import is a decision the user is making rather than work
-   * they are abandoning, so asking them to confirm it would be asking twice.
+   * Add and edit are dismissed with the sheet's backdrop or its Cancel button;
+   * a review needs an answer for "is this one of yours?", so it gets an
+   * explicit button.
    */
   onSkip?: () => void;
-  /** Label for that button; only meaningful alongside `onSkip`. */
+  /** Label for that button; defaults to "Skip". Only meaningful with `onSkip`. */
   skipLabel?: string;
+  /**
+   * Sizes to its content instead of filling the screen.
+   *
+   * Add and edit sit in a content-sized sheet; the bank review keeps its
+   * full-height native modal, where the form must fill the page.
+   */
+  contentSized?: boolean;
 };
 
 /**
@@ -95,8 +112,10 @@ export function TransactionForm({
   submitLabel,
   onSkip,
   skipLabel,
+  contentSized,
 }: TransactionFormProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [form, dispatch] = useReducer(formReducer, state);
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
   /**
@@ -116,6 +135,10 @@ export function TransactionForm({
     state.title.trim().length > 0,
   );
 
+  // Guards a second tap that lands before the render that disables the button;
+  // the render-level `isSaving` alone is too late to stop it.
+  const saving = useRef(false);
+
   const { data: funds = [] } = useFunds();
   const { suggestions, shouldShow } = useTitleSuggestions(form.title);
 
@@ -134,41 +157,13 @@ export function TransactionForm({
 
   const currencySymbol = { EUR: '€', USD: '$', JPY: '¥' }[form.currency];
 
-  // The state as it was on opening, captured once. A ref rather than a
-  // comparison against the `state` prop, because the add screen builds that
-  // prop afresh on every render — including a new `Date` — so comparing against
-  // it would report every untouched form as dirty.
-  const initialState = useRef(form);
-
-  /**
-   * Cancels, asking first if anything has been entered.
-   *
-   * The confirmation is only worth showing when there is work to lose; asking
-   * on an untouched form is friction for no reason.
-   */
-  function handleCancel() {
-    // A skip is a decision, not an abandonment — it is the answer to "is this
-    // one of yours?", so it goes straight through.
-    if (onSkip) {
-      onSkip();
-      return;
-    }
-
-    if (!hasChanges(form, initialState.current)) {
-      onDone();
-      return;
-    }
-
-    Alert.alert('Discard this transaction?', 'What you have entered will not be saved.', [
-      { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: onDone },
-    ]);
-  }
-
   async function handleSave() {
+    if (saving.current) return;
+
     dispatch({ kind: 'validate' });
     if (!isSubmittable(form)) return;
 
+    saving.current = true;
     const input = toInput(form);
 
     try {
@@ -192,6 +187,8 @@ export function TransactionForm({
       console.error('Transaction save failed:', error);
       hapticError();
       Alert.alert('Could not save', messageOf(error));
+    } finally {
+      saving.current = false;
     }
   }
 
@@ -235,79 +232,122 @@ export function TransactionForm({
     group: fund.top_level_category ?? undefined,
   }));
 
+  /** A fund picked anywhere in the form is the transaction's `sourceFund`. */
+  function selectFund(value: string) {
+    const fund = funds.find((candidate) => candidate.id === value);
+    if (fund) {
+      dispatch({ kind: 'setFund', which: 'source', value: { id: fund.id, name: fund.name } });
+    }
+  }
+
   return (
-    // No top inset: this is presented as a modal with a header, and the header
-    // already clears the status bar. Insetting again would double the gap.
-    <Screen insetTop={false}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <Pressable
-              onPress={handleCancel}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={skipLabel ?? 'Cancel'}>
-              <ThemedText style={{ color: theme.tint }}>{skipLabel ?? 'Cancel'}</ThemedText>
-            </Pressable>
-          ),
-        }}
-      />
+    // No top inset: the sheet starts below the status bar, and the bank review
+    // modal's native header supplies its own.
+    <Screen insetTop={false} style={contentSized ? styles.contentSized : undefined}>
+      {onSkip ? (
+        <Stack.Screen
+          options={{
+            headerLeft: () => (
+              <Pressable
+                onPress={onSkip}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={skipLabel ?? 'Skip'}>
+                <ThemedText style={{ color: theme.tint }}>{skipLabel ?? 'Skip'}</ThemedText>
+              </Pressable>
+            ),
+          }}
+        />
+      ) : null}
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        // Lets iOS inset the scroll view by the keyboard's height, so the lower
-        // fields and the save button can be scrolled clear of it, and a field
-        // focused near the bottom scrolls itself into view. Without this the
-        // keyboard simply covers the bottom of the form.
-        automaticallyAdjustKeyboardInsets
-        // Tapping a picker or Save while the keyboard is up should do that, not
-        // merely dismiss the keyboard first.
-        keyboardShouldPersistTaps="handled"
-        // Dragging down on the form dismisses the keyboard, which is the
-        // expected gesture and also stops a scroll from fighting the sheet's
-        // swipe-to-dismiss.
-        keyboardDismissMode="interactive">
-        {showErrors && errorList ? (
-          <View style={[styles.errorSummary, { backgroundColor: theme.card }]} accessibilityRole="alert">
-            <ThemedText themeColor="destructive" style={styles.errorTitle}>
-              Missing required information
-            </ThemedText>
-            {Object.entries(form.errors)
-              .filter(([, message]) => message)
-              .map(([field, message]) => (
-                <ThemedText key={field} themeColor="destructive" style={styles.errorItem}>
-                  • {message}
-                </ThemedText>
-              ))}
-          </View>
-        ) : null}
+      <KeyboardAvoidingView
+        style={contentSized ? styles.contentSized : styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={contentSized ? styles.contentSizedScroll : undefined}
+          contentContainerStyle={[
+            styles.content,
+            {
+              // The sheet already pads for the home indicator; the native
+              // review modal does not.
+              paddingBottom: contentSized ? 0 : Math.max(insets.bottom, Spacing.three),
+            },
+          ]}
+          // Lets iOS inset the scroll view by the keyboard's height, so the
+          // lower fields can be scrolled clear of it, and a field focused near
+          // the bottom scrolls itself into view.
+          automaticallyAdjustKeyboardInsets
+          // Tapping a picker or Save while the keyboard is up should do that,
+          // not merely dismiss the keyboard first.
+          keyboardShouldPersistTaps="handled"
+          // Dragging down on the form dismisses the keyboard, which is the
+          // expected gesture.
+          keyboardDismissMode="interactive">
+          {showErrors && errorList ? (
+            <View
+              style={[styles.errorSummary, { backgroundColor: theme.card }]}
+              accessibilityRole="alert">
+              <ThemedText themeColor="destructive" style={styles.errorTitle}>
+                Missing required information
+              </ThemedText>
+              {Object.entries(form.errors)
+                .filter(([, message]) => message)
+                .map(([field, message]) => (
+                  <ThemedText key={field} themeColor="destructive" style={styles.errorItem}>
+                    • {message}
+                  </ThemedText>
+                ))}
+            </View>
+          ) : null}
 
-        <TypeSelector form={form} dispatch={dispatch} />
-
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.amountRow}>
-            <ThemedText style={styles.currencySymbol}>{currencySymbol}</ThemedText>
-            <TextInput
-              value={form.amount}
-              onChangeText={(value) => dispatch({ kind: 'setAmount', value })}
-              onBlur={() => dispatch({ kind: 'blurAmount' })}
-              placeholder="0.00"
-              placeholderTextColor={theme.textSecondary}
-              // Not `type=number`: it rejects a comma on some keyboards, and the
-              // reducer normalises commas anyway.
-              keyboardType="decimal-pad"
-              style={[styles.amountInput, { color: theme.text }]}
-              accessibilityLabel="Amount"
+            <View
+              style={[
+                styles.amountField,
+                { backgroundColor: theme.card, borderColor: theme.separator },
+              ]}>
+              <ThemedText style={styles.currencySymbol}>{currencySymbol}</ThemedText>
+              <TextInput
+                value={form.amount}
+                onChangeText={(value) => dispatch({ kind: 'setAmount', value })}
+                onBlur={() => dispatch({ kind: 'blurAmount' })}
+                placeholder="0.00"
+                placeholderTextColor={theme.textSecondary}
+                // Not `type=number`: it rejects a comma on some keyboards, and the
+                // reducer normalises commas anyway.
+                keyboardType="decimal-pad"
+                style={[styles.amountInput, { color: theme.text }]}
+                accessibilityLabel="Amount"
+              />
+              <Pressable
+                onPress={() => setOpenPicker('currency')}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Currency: ${form.currency}`}
+                style={styles.currencyButton}>
+                <ThemedText style={{ color: theme.tint }}>{form.currency}</ThemedText>
+                <SymbolView name="chevron.up.chevron.down" size={11} tintColor={theme.tint} />
+              </Pressable>
+            </View>
+
+            <OptionToggle
+              symbol="eye.slash"
+              label="Hide from totals"
+              checked={!isTransfer && form.hideFromTotals}
+              disabled={isTransfer}
+              hint={
+                isTransfer
+                  ? 'Money transfers are excluded from totals automatically'
+                  : undefined
+              }
+              onChange={(value) => dispatch({ kind: 'setHideFromTotals', value })}
             />
-            <Pressable
-              onPress={() => setOpenPicker('currency')}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={`Currency: ${form.currency}`}
-              style={styles.currencyButton}>
-              <ThemedText style={{ color: theme.tint }}>{form.currency}</ThemedText>
-              <SymbolView name="chevron.up.chevron.down" size={11} tintColor={theme.tint} />
-            </Pressable>
+            <OptionToggle
+              symbol="arrow.triangle.branch"
+              label="Split across year"
+              checked={form.splitAcrossYear}
+              onChange={(value) => dispatch({ kind: 'setSplitAcrossYear', value })}
+            />
           </View>
 
           {showErrors && form.errors.amount ? (
@@ -315,145 +355,175 @@ export function TransactionForm({
               {form.errors.amount}
             </ThemedText>
           ) : null}
-        </View>
 
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <ToggleRow
-            label="Hide from totals"
-            detail={isTransfer ? 'Not available for transfers' : undefined}
-            value={isTransfer ? false : form.hideFromTotals}
-            disabled={isTransfer}
-            onChange={(value) => dispatch({ kind: 'setHideFromTotals', value })}
-          />
-          <View style={[styles.divider, { backgroundColor: theme.separator }]} />
-          <ToggleRow
-            label="Split across year"
-            value={form.splitAcrossYear}
-            onChange={(value) => dispatch({ kind: 'setSplitAcrossYear', value })}
-          />
-        </View>
+          <TypeSelector form={form} dispatch={dispatch} />
 
-        {isTransfer ? (
-          <>
+          {isTransfer ? (
+            <>
+              <FieldRow
+                label="From fund"
+                value={form.sourceFund?.name ?? 'Select'}
+                empty={!form.sourceFund}
+                error={showErrors ? form.errors.mainCategory : ''}
+                onPress={() => setOpenPicker('sourceFund')}
+              />
+              <FieldRow
+                label="To fund"
+                value={form.targetFund?.name ?? 'Select'}
+                empty={!form.targetFund}
+                error={showErrors ? form.errors.subCategory : ''}
+                onPress={() => setOpenPicker('targetFund')}
+              />
+              {form.sourceFund && form.targetFund ? (
+                <TransferWarning
+                  sourceCurrency={funds.find((f) => f.id === form.sourceFund?.id)?.currency}
+                  targetCurrency={funds.find((f) => f.id === form.targetFund?.id)?.currency}
+                />
+              ) : null}
+            </>
+          ) : (
             <FieldRow
-              label="From fund"
+              label="Select fund"
               value={form.sourceFund?.name ?? 'Select'}
               empty={!form.sourceFund}
-              error={showErrors ? form.errors.mainCategory : ''}
-              onPress={() => setOpenPicker('sourceFund')}
+              onPress={() => setOpenPicker('fund')}
             />
-            <FieldRow
-              label="To fund"
-              value={form.targetFund?.name ?? 'Select'}
-              empty={!form.targetFund}
-              error={showErrors ? form.errors.subCategory : ''}
-              onPress={() => setOpenPicker('targetFund')}
-            />
-
-            {form.sourceFund && form.targetFund ? (
-              <TransferWarning
-                sourceCurrency={funds.find((f) => f.id === form.sourceFund?.id)?.currency}
-                targetCurrency={funds.find((f) => f.id === form.targetFund?.id)?.currency}
-              />
-            ) : null}
-          </>
-        ) : (
-          <>
-            <FieldRow
-              label="Category"
-              value={form.mainCategory || 'Select'}
-              empty={!form.mainCategory}
-              marked={form.autoFilled.mainCategory}
-              error={showErrors ? form.errors.mainCategory : ''}
-              onPress={() => setOpenPicker('mainCategory')}
-            />
-            <FieldRow
-              label="Subcategory"
-              value={form.subCategory || 'Select'}
-              empty={!form.subCategory}
-              marked={form.autoFilled.subCategory}
-              error={showErrors ? form.errors.subCategory : ''}
-              disabled={!form.mainCategory}
-              onPress={() => setOpenPicker('subCategory')}
-            />
-          </>
-        )}
-
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <TextInput
-            value={form.title}
-            onChangeText={(value) => {
-              setSuggestionsDismissed(false);
-              dispatch({ kind: 'setTitle', value });
-            }}
-            placeholder="Title"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.titleInput, { color: theme.text }]}
-            accessibilityLabel="Title"
-          />
-          {showErrors && form.errors.title ? (
-            <ThemedText themeColor="destructive" style={styles.fieldError}>
-              {form.errors.title}
-            </ThemedText>
-          ) : null}
-        </View>
-
-        {shouldShow && !suggestionsDismissed && suggestions.length > 0 ? (
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            {suggestions.map((suggestion, index) => (
-              <View key={suggestion.id}>
-                {index > 0 ? (
-                  <View style={[styles.divider, { backgroundColor: theme.separator }]} />
-                ) : null}
-                <Pressable
-                  onPress={() => {
-                    setSuggestionsDismissed(true);
-                    dispatch({ kind: 'applySuggestion', value: suggestion });
-                  }}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.suggestion,
-                    { backgroundColor: pressed ? theme.backgroundElement : 'transparent' },
-                  ]}>
-                  <ThemedText numberOfLines={1}>{suggestion.title}</ThemedText>
-                  <ThemedText themeColor="textSecondary" style={styles.suggestionMeta} numberOfLines={1}>
-                    {suggestion.main_category}
-                    {suggestion.sub_category ? ` · ${suggestion.sub_category}` : ''}
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        <DateField value={form.date} onChange={(value) => dispatch({ kind: 'setDate', value })} />
-
-        <Pressable
-          onPress={handleSave}
-          disabled={isSaving}
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.saveButton,
-            { backgroundColor: theme.tint, opacity: isSaving ? 0.5 : pressed ? 0.8 : 1 },
-          ]}>
-          {isSaving ? (
-            <ActivityIndicator color={theme.onTint} />
-          ) : (
-            <ThemedText style={[styles.saveLabel, { color: theme.onTint }]}>
-              {submitLabel ?? (transactionId ? 'Save changes' : 'Add transaction')}
-            </ThemedText>
           )}
-        </Pressable>
 
-        {transactionId ? (
-          <Pressable
-            onPress={confirmDelete}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.deleteButton, { opacity: pressed ? 0.6 : 1 }]}>
-            <ThemedText themeColor="destructive">Delete transaction</ThemedText>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+          <View>
+            <TextInput
+              value={form.title}
+              onChangeText={(value) => {
+                setSuggestionsDismissed(false);
+                dispatch({ kind: 'setTitle', value });
+              }}
+              placeholder="Title"
+              placeholderTextColor={theme.textSecondary}
+              style={[
+                styles.titleInput,
+                {
+                  color: theme.text,
+                  backgroundColor: theme.card,
+                  borderColor: theme.separator,
+                },
+              ]}
+              accessibilityLabel="Title"
+            />
+            {showErrors && form.errors.title ? (
+              <ThemedText themeColor="destructive" style={styles.fieldError}>
+                {form.errors.title}
+              </ThemedText>
+            ) : null}
+          </View>
+
+          {shouldShow && !suggestionsDismissed && suggestions.length > 0 ? (
+            <View style={[styles.card, { backgroundColor: theme.card }]}>
+              {suggestions.map((suggestion, index) => (
+                <View key={suggestion.id}>
+                  {index > 0 ? (
+                    <View style={[styles.divider, { backgroundColor: theme.separator }]} />
+                  ) : null}
+                  <Pressable
+                    onPress={() => {
+                      setSuggestionsDismissed(true);
+                      dispatch({ kind: 'applySuggestion', value: suggestion });
+                    }}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.suggestion,
+                      { backgroundColor: pressed ? theme.backgroundElement : 'transparent' },
+                    ]}>
+                    <ThemedText numberOfLines={1}>{suggestion.title}</ThemedText>
+                    <ThemedText
+                      themeColor="textSecondary"
+                      style={styles.suggestionMeta}
+                      numberOfLines={1}>
+                      {suggestion.main_category}
+                      {suggestion.sub_category ? ` · ${suggestion.sub_category}` : ''}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {!isTransfer ? (
+            <>
+              <FieldRow
+                label="Category"
+                value={form.mainCategory || 'Select'}
+                empty={!form.mainCategory}
+                marked={form.autoFilled.mainCategory}
+                error={showErrors ? form.errors.mainCategory : ''}
+                onPress={() => setOpenPicker('mainCategory')}
+              />
+              <FieldRow
+                label="Sub Category"
+                value={form.subCategory || 'Select'}
+                empty={!form.subCategory}
+                marked={form.autoFilled.subCategory}
+                error={showErrors ? form.errors.subCategory : ''}
+                disabled={!form.mainCategory}
+                onPress={() => setOpenPicker('subCategory')}
+              />
+            </>
+          ) : null}
+
+          <DateField value={form.date} onChange={(value) => dispatch({ kind: 'setDate', value })} />
+
+          <View style={styles.actions}>
+            {/* Add and edit get a Cancel here; a bank review uses the header's
+                Skip instead, so its Accept button stays full width. */}
+            {onSkip ? null : (
+              <Pressable
+                onPress={onDone}
+                disabled={isSaving}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSaving }}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.cancelButton,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.separator,
+                    opacity: isSaving ? 0.5 : pressed ? 0.7 : 1,
+                  },
+                ]}>
+                <ThemedText themeColor="textSecondary" style={styles.actionLabel}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+            )}
+
+            <Pressable
+              onPress={handleSave}
+              disabled={isSaving}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSaving, busy: isSaving }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: theme.tint, opacity: isSaving ? 0.5 : pressed ? 0.8 : 1 },
+              ]}>
+              {isSaving ? (
+                <ActivityIndicator color={theme.onTint} />
+              ) : (
+                <ThemedText style={[styles.actionLabel, { color: theme.onTint }]}>
+                  {submitLabel ?? (transactionId ? 'Save' : 'Add')}
+                </ThemedText>
+              )}
+            </Pressable>
+          </View>
+
+          {transactionId ? (
+            <Pressable
+              onPress={confirmDelete}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.deleteButton, { opacity: pressed ? 0.6 : 1 }]}>
+              <ThemedText themeColor="destructive">Delete transaction</ThemedText>
+            </Pressable>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <PickerSheet
         visible={openPicker === 'currency'}
@@ -464,6 +534,16 @@ export function TransactionForm({
         onSelect={(value) =>
           dispatch({ kind: 'setCurrency', value: value as TransactionCurrency })
         }
+      />
+
+      <PickerSheet
+        visible={openPicker === 'fund'}
+        title="Fund"
+        options={fundOptions}
+        selected={form.sourceFund?.id ?? null}
+        onClose={() => setOpenPicker(null)}
+        onSelect={selectFund}
+        searchable
       />
 
       <PickerSheet
@@ -478,7 +558,7 @@ export function TransactionForm({
 
       <PickerSheet
         visible={openPicker === 'subCategory'}
-        title="Subcategory"
+        title="Sub Category"
         options={subCategoryOptions}
         selected={form.subCategory}
         onClose={() => setOpenPicker(null)}
@@ -495,10 +575,7 @@ export function TransactionForm({
         }))}
         selected={form.sourceFund?.id ?? null}
         onClose={() => setOpenPicker(null)}
-        onSelect={(value) => {
-          const fund = funds.find((f) => f.id === value);
-          if (fund) dispatch({ kind: 'setFund', which: 'source', value: { id: fund.id, name: fund.name } });
-        }}
+        onSelect={selectFund}
         searchable
       />
 
@@ -521,7 +598,14 @@ export function TransactionForm({
   );
 }
 
-/** Expense, income and transfer, as three mutually exclusive buttons. */
+/**
+ * Expense, income and transfer, matching the web app's mobile type selector.
+ *
+ * Three equal icon-only buttons. Expense and income keep their colour in both
+ * states — a pale tint when idle, a stronger fill and coloured border when
+ * selected — while transfer stays neutral and only darkens its border. The
+ * labels are still announced by VoiceOver.
+ */
 function TypeSelector({
   form,
   dispatch,
@@ -532,9 +616,13 @@ function TypeSelector({
   const theme = useTheme();
 
   const options = [
-    { kind: 'expense' as const, symbol: 'minus.circle.fill' as const, label: 'Expense' },
-    { kind: 'income' as const, symbol: 'plus.circle.fill' as const, label: 'Income' },
-    { kind: 'transfer' as const, symbol: 'arrow.left.arrow.right.circle.fill' as const, label: 'Transfer' },
+    { kind: 'expense' as const, symbol: 'minus.circle' as const, label: 'Expense' },
+    { kind: 'income' as const, symbol: 'plus.circle' as const, label: 'Income' },
+    {
+      kind: 'transfer' as const,
+      symbol: 'arrow.left.arrow.right' as const,
+      label: 'Money Transfer',
+    },
   ];
 
   return (
@@ -544,39 +632,99 @@ function TypeSelector({
           ? form.isMoneyTransferMode
           : !form.isMoneyTransferMode && form.type === option.kind;
 
-        const tint = selected
-          ? option.kind === 'expense'
+        const color =
+          option.kind === 'expense'
             ? theme.expense
             : option.kind === 'income'
               ? theme.income
-              : theme.transfer
-          : theme.textSecondary;
+              : selected
+                ? theme.tint
+                : theme.textSecondary;
+
+        // The web uses Tailwind's red-50/red-100 (and green equivalents): the
+        // same hue at low opacity, stronger when selected.
+        const background =
+          option.kind === 'transfer'
+            ? selected
+              ? theme.card
+              : theme.backgroundElement
+            : `${color}${selected ? '33' : '1A'}`;
 
         return (
           <Pressable
             key={option.kind}
-            onPress={() =>
-              option.kind === 'transfer'
-                ? dispatch({ kind: 'setTransferMode', value: !form.isMoneyTransferMode })
-                : dispatch({ kind: 'setType', value: option.kind })
-            }
+            onPress={() => {
+              hapticSelect();
+              if (option.kind === 'transfer') {
+                dispatch({ kind: 'setTransferMode', value: !form.isMoneyTransferMode });
+              } else {
+                dispatch({ kind: 'setType', value: option.kind });
+              }
+            }}
             accessibilityRole="button"
             accessibilityState={{ selected }}
             accessibilityLabel={option.label}
             style={({ pressed }) => [
               styles.typeButton,
               {
-                backgroundColor: selected ? theme.backgroundElement : theme.card,
-                borderColor: selected ? tint : theme.separator,
+                backgroundColor: background,
+                borderColor: selected ? color : theme.separator,
                 opacity: pressed ? 0.7 : 1,
               },
             ]}>
-            <SymbolView name={option.symbol} size={22} tintColor={tint} />
-            <ThemedText style={[styles.typeLabel, { color: tint }]}>{option.label}</ThemedText>
+            <SymbolView name={option.symbol} size={20} tintColor={color} />
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/**
+ * One of the two compact toggles beside the amount.
+ *
+ * Icon-only to match the type selector; the label is announced by VoiceOver and
+ * the switch role exposes the checked state.
+ */
+function OptionToggle({
+  symbol,
+  label,
+  checked,
+  disabled,
+  hint,
+  onChange,
+}: {
+  symbol: 'eye.slash' | 'arrow.triangle.branch';
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  hint?: string;
+  onChange: (value: boolean) => void;
+}) {
+  const theme = useTheme();
+  const tint = checked ? theme.tint : theme.textSecondary;
+
+  return (
+    <Pressable
+      onPress={() => {
+        hapticSelect();
+        onChange(!checked);
+      }}
+      disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityState={{ checked, disabled }}
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      style={({ pressed }) => [
+        styles.option,
+        {
+          backgroundColor: checked ? theme.backgroundSelected : theme.card,
+          borderColor: checked ? theme.tint : theme.separator,
+          opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
+        },
+      ]}>
+      <SymbolView name={symbol} size={20} tintColor={tint} />
+    </Pressable>
   );
 }
 
@@ -602,24 +750,31 @@ function FieldRow({
   const theme = useTheme();
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card }]}>
+    <View>
       <Pressable
         onPress={onPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${value}`}
+        accessibilityLabel={empty ? label : `${label}: ${value}`}
+        accessibilityState={{ disabled }}
         style={({ pressed }) => [
           styles.fieldRow,
-          { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 },
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.separator,
+            opacity: disabled ? 0.4 : pressed ? 0.6 : 1,
+          },
         ]}>
         <View style={styles.fieldLabel}>
-          <ThemedText>{label}</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.fieldLabelText}>
+            {label}
+          </ThemedText>
           {marked ? <View style={[styles.autoDot, { backgroundColor: theme.tint }]} /> : null}
         </View>
         <View style={styles.fieldValue}>
-          <ThemedText themeColor={empty ? 'textSecondary' : 'text'} numberOfLines={1}>
-            {value}
-          </ThemedText>
+          {empty ? null : (
+            <ThemedText numberOfLines={1}>{value}</ThemedText>
+          )}
           <SymbolView name="chevron.right" size={12} tintColor={theme.textSecondary} />
         </View>
       </Pressable>
@@ -629,34 +784,6 @@ function FieldRow({
           {error}
         </ThemedText>
       ) : null}
-    </View>
-  );
-}
-
-function ToggleRow({
-  label,
-  detail,
-  value,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  detail?: string;
-  value: boolean;
-  disabled?: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.toggleRow}>
-      <View style={styles.toggleLabel}>
-        <ThemedText>{label}</ThemedText>
-        {detail ? (
-          <ThemedText themeColor="textSecondary" style={styles.toggleDetail}>
-            {detail}
-          </ThemedText>
-        ) : null}
-      </View>
-      <Switch value={value} onValueChange={onChange} disabled={disabled} />
     </View>
   );
 }
@@ -689,38 +816,20 @@ function TransferWarning({
   );
 }
 
-/**
- * Whether anything has been entered since the form opened.
- *
- * Compares only the fields a user can change, ignoring validation errors and the
- * auto-fill markers — those follow from the fields and would otherwise make an
- * untouched form look edited.
- *
- * @param form The current state.
- * @param initial The state as it was on opening.
- */
-function hasChanges(form: FormState, initial: FormState): boolean {
-  return (
-    form.type !== initial.type ||
-    form.isMoneyTransferMode !== initial.isMoneyTransferMode ||
-    form.amount.trim() !== initial.amount.trim() ||
-    form.currency !== initial.currency ||
-    form.title.trim() !== initial.title.trim() ||
-    form.mainCategory !== initial.mainCategory ||
-    form.subCategory !== initial.subCategory ||
-    form.hideFromTotals !== initial.hideFromTotals ||
-    form.splitAcrossYear !== initial.splitAcrossYear ||
-    form.sourceFund?.id !== initial.sourceFund?.id ||
-    form.targetFund?.id !== initial.targetFund?.id ||
-    form.date.getTime() !== initial.date.getTime()
-  );
-}
-
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  // Let the sheet measure the form rather than filling the screen.
+  contentSized: {
+    flex: 0,
+  },
+  contentSizedScroll: {
+    flexGrow: 0,
+  },
   content: {
     padding: Spacing.three,
     gap: Spacing.two,
-    paddingBottom: Spacing.six,
   },
   card: {
     borderRadius: Radius.medium,
@@ -739,27 +848,32 @@ const styles = StyleSheet.create({
   },
   typeRow: {
     flexDirection: 'row',
-    gap: Spacing.two,
+    // Tailwind's space-x-3 in the web form.
+    gap: 12,
   },
   typeButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.one,
-    paddingVertical: Spacing.two + 2,
-    borderRadius: Radius.medium,
-    borderWidth: 1.5,
-  },
-  typeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.small,
+    borderWidth: 2,
   },
   amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  amountField: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
     minHeight: 56,
     gap: Spacing.two,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   currencySymbol: {
     fontSize: 22,
@@ -780,18 +894,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
+  option: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.medium,
+    borderWidth: 2,
+  },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
     minHeight: 48,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   fieldLabel: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  fieldLabelText: {
+    fontSize: 15,
   },
   autoDot: {
     width: 6,
@@ -806,32 +934,20 @@ const styles = StyleSheet.create({
   },
   fieldError: {
     fontSize: 12,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    paddingTop: Spacing.half,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginLeft: Spacing.three,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    minHeight: 48,
-  },
-  toggleLabel: {
-    flex: 1,
-    gap: 1,
-  },
-  toggleDetail: {
-    fontSize: 12,
-  },
   titleInput: {
-    fontSize: 16,
+    fontSize: 17,
     paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
     minHeight: 48,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   suggestion: {
     paddingHorizontal: Spacing.three,
@@ -853,14 +969,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  saveButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
     height: 50,
     borderRadius: Radius.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.two,
   },
-  saveLabel: {
+  cancelButton: {
+    borderWidth: 1,
+  },
+  actionLabel: {
+    fontSize: 17,
     fontWeight: '600',
   },
   deleteButton: {

@@ -8,6 +8,8 @@
 import {
   calculateExpectedSplitAmountEur,
   expandSplitTransactionsForMonth,
+  getTransactionDisplayAmount,
+  getTransactionDisplayEurAmount,
 } from '@/domain/split-transactions';
 import type { Transaction } from '@/domain/types';
 import {
@@ -33,6 +35,8 @@ export type MonthSummary = {
   hiddenExpenseTotal: number;
   incomeCategories: CategoryTotal[];
   expenseCategories: CategoryTotal[];
+  /** Every split slice for the month, visible or not. */
+  totalSplitAmountEur: number;
   /** Share of split transactions that has not appeared as a row yet. */
   expectedSplitAmountEur: number;
   /** Null for a future month, which has nothing to compare. */
@@ -109,6 +113,18 @@ function sortedCategories(totals: Record<string, number>): CategoryTotal[] {
     .sort((a, b) => b.total - a.total);
 }
 
+/** Sums the month's split slices in EUR, whether or not they are visible yet. */
+function sumSplitAmountEur(rows: readonly Transaction[]): number {
+  let total = 0;
+  for (const row of rows) {
+    const eur =
+      getTransactionDisplayEurAmount(row) ??
+      (row.currency === 'EUR' ? getTransactionDisplayAmount(row) : 0);
+    total += Math.abs(eur);
+  }
+  return total;
+}
+
 type MonthSummaryInput = {
   year: number;
   month: number;
@@ -136,13 +152,14 @@ export function computeMonthSummary({
   // The split share is measured to the end of the month, as on the web's list
   // page: it is a forecast of what is still to come, not a comparison.
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
-  const expectedSplitAmountEur =
+  const allSplitForMonth =
     splitSources.length === 0
-      ? 0
-      : calculateExpectedSplitAmountEur(
-          expandSplitTransactionsForMonth([], [...splitSources], year, month, monthEnd),
-          transactions,
-        );
+      ? []
+      : expandSplitTransactionsForMonth([], [...splitSources], year, month, monthEnd);
+  const expectedSplitAmountEur = calculateExpectedSplitAmountEur(
+    allSplitForMonth,
+    transactions,
+  );
 
   return {
     balance: totals.incomeTotal - totals.expenseTotal,
@@ -151,6 +168,7 @@ export function computeMonthSummary({
     hiddenExpenseTotal: totals.hiddenExpenseTotal,
     incomeCategories: sortedCategories(totals.incomeCategoryTotals),
     expenseCategories: sortedCategories(totals.expenseCategoryTotals),
+    totalSplitAmountEur: sumSplitAmountEur(allSplitForMonth),
     expectedSplitAmountEur,
     comparison: computeComparison({
       year,

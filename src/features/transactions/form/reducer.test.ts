@@ -56,6 +56,16 @@ function validExpense(): FormState {
   );
 }
 
+describe('the default time on a new transaction', () => {
+  it('starts on the nearest quarter hour', () => {
+    const { date } = initialFormState();
+
+    assert.equal(date.getMinutes() % 15, 0);
+    assert.equal(date.getSeconds(), 0);
+    assert.equal(date.getMilliseconds(), 0);
+  });
+});
+
 describe('money transfer mode', () => {
   it('forces the expense type and the Money Transfer category', () => {
     const state = apply(initialFormState(), { kind: 'setTransferMode', value: true });
@@ -118,6 +128,21 @@ describe('money transfer mode', () => {
     );
 
     assert.equal(state.title, '');
+  });
+});
+
+describe('the fund on an ordinary transaction', () => {
+  it('can be chosen without entering transfer mode', () => {
+    const state = apply(initialFormState(), {
+      kind: 'setFund',
+      which: 'source',
+      value: { id: 'a', name: 'Current' },
+    });
+
+    assert.equal(state.sourceFund?.id, 'a');
+    assert.equal(state.targetFund, null, 'an ordinary transaction has no target fund');
+    assert.equal(state.isMoneyTransferMode, false);
+    assert.equal(state.type, 'expense');
   });
 });
 
