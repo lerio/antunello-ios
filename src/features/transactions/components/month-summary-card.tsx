@@ -85,7 +85,7 @@ export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps
         <View style={styles.breakdown}>
           <View style={styles.breakdownRow}>
             <ThemedText themeColor="textSecondary" style={styles.breakdownLabel}>
-              Total split
+              Split transactions Total
             </ThemedText>
             <PrivacyValue style={styles.breakdownValue}>
               {formatCurrency(summary.totalSplitAmountEur, 'EUR')}

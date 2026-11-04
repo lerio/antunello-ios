@@ -57,7 +57,23 @@ export function YearView({ year, onSelectYear }: YearViewProps) {
       <View style={styles.viewTabs}>
         <ActivityControls
           value="year"
-          onChange={(next) => next === 'month' && router.back()}
+          onChange={(next) => {
+            const now = new Date();
+            if (next === 'month') {
+              // Also the way back from a different year: the month view opens
+              // on the current month, not on whatever it showed before.
+              router.navigate({
+                pathname: '/transactions',
+                params: {
+                  year: String(now.getFullYear()),
+                  month: String(now.getMonth() + 1),
+                },
+              });
+              return;
+            }
+            // Tapping the active Year tab returns to the current year.
+            router.setParams({ year: String(now.getFullYear()) });
+          }}
         />
       </View>
 

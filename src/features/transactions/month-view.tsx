@@ -111,7 +111,18 @@ export function MonthView() {
       <View style={styles.viewTabs}>
         <ActivityControls
           value="month"
-          onChange={(next) => next === 'year' && router.push('/transactions/year')}
+          onChange={(next) => {
+            if (next === 'year') {
+              router.push('/transactions/year');
+              return;
+            }
+            // Tapping the active Month tab returns to the current month.
+            const now = new Date();
+            router.setParams({
+              year: String(now.getFullYear()),
+              month: String(now.getMonth() + 1),
+            });
+          }}
         />
       </View>
 

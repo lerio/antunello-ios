@@ -125,13 +125,19 @@ export function ChipStrip({
             accessibilityLabel={`${
               item.accessibilityLabel ?? (accessibilityLabel ? `${accessibilityLabel}: ${item.label}` : item.label)
             }${isSelected ? ', selected' : ''}`}
-            style={[styles.item, { backgroundColor }]}>
+            style={[
+              styles.item,
+              {
+                backgroundColor,
+                // The current period is outlined only while a different chip is
+                // selected, where the fill does not already say which is which.
+                borderColor:
+                  item.isToday && !isSelected ? theme.textSecondary : 'transparent',
+              },
+            ]}>
             <ThemedText style={[styles.label, { color: labelColor }]} numberOfLines={1}>
               {item.label}
             </ThemedText>
-            {item.isToday ? (
-              <View style={[styles.todayDot, { backgroundColor: labelColor }]} />
-            ) : null}
           </Pressable>
         );
       })}
@@ -152,6 +158,7 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     height: CHIP_HEIGHT,
     borderRadius: Radius.small,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.two,
@@ -163,14 +170,6 @@ const styles = StyleSheet.create({
   marker: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  todayDot: {
-    position: 'absolute',
-    bottom: 5,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.6,
   },
   empty: {
     fontSize: 13,
