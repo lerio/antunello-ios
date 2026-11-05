@@ -284,7 +284,7 @@ Both clients render the same two blocks, from the same RPCs:
   `get_fund_balances`.
 
 The baseline arithmetic lives in SQL so the two apps cannot disagree: the level
-is the average of the last three complete months and the same three calendar
+is the average of the last six complete months and the same six calendar
 months a year earlier, scaled by the median intra-month shape. Both clients send
 the device's IANA timezone so month boundaries follow local time, not UTC.
 

@@ -30,7 +30,8 @@ export const FEATURE_MAP = [
   // --- Pages -------------------------------------------------------------
   { web: 'app/page.tsx', status: 'deliberate', note: 'Marketing landing page. The app opens straight to sign-in or Home.' },
   { web: 'app/(auth)/sign-in/page.tsx', status: 'ported', ios: ['src/app/(auth)/sign-in.tsx'] },
-  { web: 'app/protected/page.tsx', status: 'ported', ios: ['src/app/(tabs)/index.tsx'] },
+  { web: 'app/protected/page.tsx', status: 'ported', ios: ['src/app/(tabs)/(home)/index.tsx'] },
+  { web: 'app/protected/funds/page.tsx', status: 'ported', ios: ['src/app/(tabs)/(home)/funds.tsx', 'src/features/funds/funds-view.tsx'] },
   { web: 'app/protected/transactions/page.tsx', status: 'ported', ios: ['src/features/transactions/month-view.tsx', 'src/app/(tabs)/transactions/index.tsx'] },
   { web: 'app/protected/year/page.tsx', status: 'ported', ios: ['src/features/year/year-view.tsx', 'src/app/(tabs)/transactions/year.tsx'] },
   { web: 'app/protected/add/page.tsx', status: 'ported', ios: ['src/app/transaction/new.tsx'] },
@@ -60,6 +61,7 @@ export const FEATURE_MAP = [
   // --- Feature components ------------------------------------------------
   { web: 'components/features/at-a-glance-card.tsx', status: 'ported', ios: ['src/features/home/at-a-glance-card.tsx'] },
   { web: 'components/features/net-worth-card.tsx', status: 'ported', ios: ['src/features/home/net-worth-card.tsx', 'src/features/balance/balance-chart.tsx'] },
+  { web: 'components/features/fund-list.tsx', status: 'ported', ios: ['src/features/funds/funds-view.tsx', 'src/features/funds/group-funds.ts'] },
   { web: 'components/features/budget-card.tsx', status: 'ported', ios: ['src/features/budgets/budgets-view.tsx'] },
   { web: 'components/features/budget-form.tsx', status: 'ported', ios: ['src/features/budgets/budget-form.tsx'] },
   { web: 'components/features/category-chart.tsx', status: 'ported', ios: ['src/features/category/category-chart.tsx'] },

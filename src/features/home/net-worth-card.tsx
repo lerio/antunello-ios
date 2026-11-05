@@ -1,4 +1,5 @@
 import { SymbolView } from 'expo-symbols';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -28,6 +29,7 @@ function todayLabel(): string {
  */
 export function NetWorthCard() {
   const theme = useTheme();
+  const router = useRouter();
   const { data, isLoading, error } = useFundBalances();
   const [chartOpen, setChartOpen] = useState(false);
 
@@ -57,9 +59,20 @@ export function NetWorthCard() {
               <PrivacyValue style={styles.total}>
                 {formatCurrency(data?.totalEUR ?? 0, 'EUR')}
               </PrivacyValue>
-              <ThemedText themeColor="textSecondary" style={styles.asOf}>
-                {`as of ${todayLabel()}`}
-              </ThemedText>
+              <View style={styles.asOfRow}>
+                <ThemedText themeColor="textSecondary" style={styles.asOf}>
+                  {`as of ${todayLabel()}`}
+                </ThemedText>
+                <Pressable
+                  onPress={() => router.push('/funds')}
+                  hitSlop={8}
+                  accessibilityRole="link"
+                  accessibilityLabel="Check funds">
+                  <ThemedText themeColor="tint" style={styles.checkFunds}>
+                    Check funds
+                  </ThemedText>
+                </Pressable>
+              </View>
             </>
           )}
         </View>
@@ -122,8 +135,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
+  asOfRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
   asOf: {
     fontSize: 12,
+  },
+  checkFunds: {
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   errorText: {
     fontSize: 13,

@@ -23,7 +23,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs tintColor={theme.tint}>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('../../../assets/tab-icons/home.png')}
