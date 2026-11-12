@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   amounts: {
+    alignSelf: 'stretch',
     alignItems: 'flex-end',
     gap: 1,
   },

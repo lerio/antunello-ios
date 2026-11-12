@@ -60,7 +60,7 @@ export function AtAGlanceCard() {
   const mood = moodOf(percent);
   const moodColor =
     mood === 'over' ? theme.expense : mood === 'under' ? theme.income : theme.textSecondary;
-  const culprits = culpritsOf(movers, mood);
+  const culprits = culpritsOf(movers);
 
   // The bar reads left to right: spent so far, with a tick at the usual level.
   // The 10% headroom keeps an over-spend visible instead of clipping at 100%.
@@ -226,7 +226,18 @@ export function AtAGlanceCard() {
                         </ThemedText>
                       ) : null}
                     </View>
-                    <PrivacyValue style={[styles.moverAmount, { color: moodColor }]}>
+                    <PrivacyValue
+                      style={[
+                        styles.moverAmount,
+                        {
+                          color:
+                            mover.delta > 0
+                              ? theme.expense
+                              : mover.delta < 0
+                                ? theme.income
+                                : theme.textSecondary,
+                        },
+                      ]}>
                       {signed(mover.delta)}
                     </PrivacyValue>
                   </View>

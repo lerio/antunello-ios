@@ -42,23 +42,19 @@ describe('culpritsOf', () => {
     { name: 'Dining', delta: -300 },
   ];
 
-  it('takes the biggest over-spends when running hot', () => {
+  it('takes the biggest movers regardless of direction', () => {
     assert.deepEqual(
-      culpritsOf(movers, 'over').map((mover) => mover.name),
-      ['Groceries', 'Travel'],
+      culpritsOf(movers).map((mover) => mover.name),
+      ['Dining', 'Groceries', 'Travel', 'Rent'],
     );
   });
 
-  it('takes the biggest under-spends, most negative first, when running cold', () => {
+  it('caps the list without needing the month to be over or under', () => {
     assert.deepEqual(
-      culpritsOf(movers, 'under').map((mover) => mover.name),
-      ['Dining', 'Rent'],
+      culpritsOf(movers, 1).map((mover) => mover.name),
+      ['Dining'],
     );
-  });
-
-  it('caps the list and stays empty when in line', () => {
-    assert.equal(culpritsOf(movers, 'over', 1).length, 1);
-    assert.deepEqual(culpritsOf(movers, 'inline'), []);
+    assert.deepEqual(culpritsOf([]), []);
   });
 });
 

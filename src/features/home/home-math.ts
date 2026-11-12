@@ -29,23 +29,15 @@ export function moodOf(percent: number | null): PaceMood {
 }
 
 /**
- * Up to three categories explaining the gap, in the direction it runs.
- *
- * Expects movers ordered by delta descending, which is what the RPC returns.
+ * The five biggest movers, whichever direction they run in.
  */
 export function culpritsOf<T extends { delta: number }>(
   movers: readonly T[],
-  mood: PaceMood,
-  limit = 3,
+  limit = 5,
 ): T[] {
-  if (mood === 'over') return movers.filter((mover) => mover.delta > 0).slice(0, limit);
-  if (mood === 'under') {
-    return movers
-      .filter((mover) => mover.delta < 0)
-      .slice(-limit)
-      .reverse();
-  }
-  return [];
+  return [...movers]
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, limit);
 }
 
 /**
