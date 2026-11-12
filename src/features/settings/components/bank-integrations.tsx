@@ -45,7 +45,17 @@ export function BankIntegrations() {
 
   return (
     <>
-      <View style={[styles.card, { backgroundColor: theme.card }]}>
+      <View style={[
+        styles.card,
+        { backgroundColor: theme.card, borderColor: theme.separator, borderWidth: StyleSheet.hairlineWidth },
+      ]}>
+        <ThemedText
+          accessibilityRole="header"
+          themeColor="textSecondary"
+          style={styles.sectionLabel}>
+          BANK INTEGRATIONS
+        </ThemedText>
+
         {isLoading ? <ActivityIndicator /> : null}
 
         {isError ? (
@@ -178,6 +188,10 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.medium,
     gap: Spacing.two,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   row: {
     paddingVertical: Spacing.two,

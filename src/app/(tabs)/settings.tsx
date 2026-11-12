@@ -9,8 +9,8 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { BankIntegrations } from '@/features/settings/components/bank-integrations';
-import { messageOf } from '@/lib/errors';
 import { useTheme } from '@/hooks/use-theme';
+import { messageOf } from '@/lib/errors';
 
 /**
  * Settings.
@@ -44,10 +44,6 @@ export default function SettingsScreen() {
       <ScreenHeader title="Settings" />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
-          BANKS
-        </ThemedText>
-
         <BankIntegrations />
 
         <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>

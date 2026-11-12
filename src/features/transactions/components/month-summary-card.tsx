@@ -21,7 +21,7 @@ type MonthSummaryCardProps = {
 function periodTitle(year: number, month: number): string {
   const now = new Date();
   if (year === now.getFullYear() && month === now.getMonth() + 1) {
-    return 'Net · This month';
+    return 'NET · THIS MONTH';
   }
   const name = new Date(year, month - 1, 1).toLocaleDateString('en-GB', {
     month: 'long',
