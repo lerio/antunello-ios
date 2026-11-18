@@ -60,7 +60,7 @@ export function BankIntegrations() {
 
         {isError ? (
           <ThemedText themeColor="destructive">
-            Couldn’t load your bank connections.
+            Couldn&apos;t load your bank connections.
           </ThemedText>
         ) : null}
 
@@ -92,7 +92,7 @@ export function BankIntegrations() {
 
       <ThemedText themeColor="textSecondary" style={styles.footnote}>
         Connecting and re-authenticating happen in the browser, where the bank&apos;s own
-        sign-in runs. The browser opens signed out the first time — sign in once and it
+        sign-in runs. The browser opens signed out the first time -- sign in once and it
         will remember.
       </ThemedText>
     </>
@@ -116,10 +116,13 @@ function BankRow({
   const expired = hasExpiredSession(accounts, bank.name);
   const lastSync = lastSyncFor(accounts, bank.name);
 
+  const rowBackground = connected ? theme.backgroundElement : 'transparent';
+
   return (
     <View
       style={[
         styles.row,
+        { backgroundColor: rowBackground, borderRadius: Radius.medium },
         !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },
       ]}>
       <View style={styles.rowText}>
@@ -186,15 +189,22 @@ function StatusPill({
 const styles = StyleSheet.create({
   card: {
     padding: Spacing.three,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.large,
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: '600',
   },
   row: {
-    paddingVertical: Spacing.two,
+    padding: Spacing.three,
+    marginHorizontal: -Spacing.three,
+    marginVertical: Spacing.one,
   },
   rowText: {
     gap: Spacing.half,

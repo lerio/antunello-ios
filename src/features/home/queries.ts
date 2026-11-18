@@ -41,12 +41,18 @@ type MonthPace = {
 type MonthMoverRow = {
   main_category: string;
   sub_category: string | null;
+  spent_to_date: number;
+  typical_to_date: number;
   delta: number;
 };
 
 export type MonthMover = {
   mainCategory: string;
   subCategory: string | null;
+  /** What it has cost so far this month. */
+  spentToDate: number;
+  /** What a typical month would have spent by this day. */
+  typicalToDate: number;
   /** What it has cost so far minus what a typical month would have by now. */
   delta: number;
 };
@@ -141,6 +147,8 @@ export function useMonthMovers() {
       return ((data ?? []) as MonthMoverRow[]).map((row) => ({
         mainCategory: row.main_category,
         subCategory: row.sub_category,
+        spentToDate: Number(row.spent_to_date) || 0,
+        typicalToDate: Number(row.typical_to_date) || 0,
         delta: Number(row.delta) || 0,
       }));
     },

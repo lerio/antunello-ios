@@ -34,27 +34,43 @@ describe('moodOf', () => {
 });
 
 describe('culpritsOf', () => {
-  // Ordered as the RPC returns them: largest delta first.
+  // Each mover has a mainCategory; the function groups by it and sums deltas.
   const movers = [
-    { name: 'Groceries', delta: 50 },
-    { name: 'Travel', delta: 20 },
-    { name: 'Rent', delta: -5 },
-    { name: 'Dining', delta: -300 },
+    { mainCategory: 'Groceries', delta: 50, spentToDate: 100, typicalToDate: 50 },
+    { mainCategory: 'Travel', delta: 20, spentToDate: 50, typicalToDate: 30 },
+    { mainCategory: 'Rent', delta: -5, spentToDate: 1000, typicalToDate: 1005 },
+    { mainCategory: 'Dining', delta: -300, spentToDate: 200, typicalToDate: 500 },
   ];
 
   it('takes the biggest movers regardless of direction', () => {
     assert.deepEqual(
-      culpritsOf(movers).map((mover) => mover.name),
+      culpritsOf(movers).map((mover) => mover.mainCategory),
       ['Dining', 'Groceries', 'Travel', 'Rent'],
     );
   });
 
   it('caps the list without needing the month to be over or under', () => {
     assert.deepEqual(
-      culpritsOf(movers, 1).map((mover) => mover.name),
+      culpritsOf(movers, 1).map((mover) => mover.mainCategory),
       ['Dining'],
     );
     assert.deepEqual(culpritsOf([]), []);
+  });
+
+  it('groups by main category and sums deltas', () => {
+    const withSubcategories = [
+      { mainCategory: 'Groceries', delta: 30, spentToDate: 60, typicalToDate: 30 },
+      { mainCategory: 'Groceries', delta: 20, spentToDate: 40, typicalToDate: 20 },
+      { mainCategory: 'Travel', delta: -100, spentToDate: 50, typicalToDate: 150 },
+    ];
+    const result = culpritsOf(withSubcategories);
+    assert.equal(result.length, 2);
+    const groceries = result.find((r) => r.mainCategory === 'Groceries');
+    const travel = result.find((r) => r.mainCategory === 'Travel');
+    assert.deepEqual(groceries?.delta, 50);
+    assert.deepEqual(travel?.delta, -100);
+    assert.deepEqual(groceries?.spentToDate, 100);
+    assert.deepEqual(groceries?.typicalToDate, 50);
   });
 });
 

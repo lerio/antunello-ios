@@ -47,9 +47,9 @@ export function NetWorthCard() {
         <View style={styles.headerLeft}>
           <ThemedText
             accessibilityRole="header"
-            themeColor="textSecondary"
+            themeColor="text"
             style={styles.sectionLabel}>
-            NET WORTH
+            Net worth
           </ThemedText>
 
           {isLoading ? (
@@ -106,15 +106,21 @@ export function NetWorthCard() {
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.large,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
+    padding: Spacing.four,        // 16px - matches web p-4 on mobile
+    gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: 0,         // padding now on card
+    paddingVertical: 0,
     gap: Spacing.two,
   },
   headerLeft: {
@@ -125,13 +131,12 @@ const styles = StyleSheet.create({
     padding: Spacing.two,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 18,                 // matches web text-lg (18px)
     fontWeight: '600',
   },
   total: {
-    fontSize: 32,
-    // Explicit: ThemedText's default lineHeight is 24 and would clip the glyphs.
-    lineHeight: 38,
+    fontSize: 30,                 // matches web text-3xl (30px)
+    lineHeight: 36,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: 0,         // padding now on card
     paddingBottom: Spacing.two,
   },
 });

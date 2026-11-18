@@ -90,6 +90,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   title: {
     fontSize: 17,

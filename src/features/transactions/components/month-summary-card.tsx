@@ -21,7 +21,7 @@ type MonthSummaryCardProps = {
 function periodTitle(year: number, month: number): string {
   const now = new Date();
   if (year === now.getFullYear() && month === now.getMonth() + 1) {
-    return 'NET · THIS MONTH';
+    return 'Net · This month';
   }
   const name = new Date(year, month - 1, 1).toLocaleDateString('en-GB', {
     month: 'long',
@@ -57,7 +57,7 @@ export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
       <View style={styles.header}>
-        <ThemedText themeColor="textSecondary" style={styles.label} numberOfLines={1}>
+        <ThemedText themeColor="text" style={styles.sectionLabel} numberOfLines={1}>
           {periodTitle(year, month)}
         </ThemedText>
         <Pressable
@@ -258,10 +258,15 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.three,
     marginTop: Spacing.three,
     marginBottom: Spacing.three,
-    padding: Spacing.three,
+    padding: Spacing.four,        // 24px - matches at-a-glance card (web p-4 on mobile)
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   header: {
     flexDirection: 'row',
@@ -269,9 +274,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
   },
-  label: {
+  sectionLabel: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: '600',
   },
   toggle: {
@@ -301,8 +306,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   hero: {
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 30,                 // matches at-a-glance total (text-3xl = 30px)
+    lineHeight: 36,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },

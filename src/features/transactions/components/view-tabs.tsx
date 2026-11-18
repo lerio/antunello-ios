@@ -17,17 +17,18 @@ const OPTIONS = [
 /**
  * The Month / Year switch.
  *
- * A segmented control rather than two headings: the page title above already
- * carries the heading weight, and a control that looks like text does not read
- * as something tappable. The selected segment is the black pill the web app
- * uses, which inverts in dark mode.
+ * Matches the web app's TransactionViewTabs: muted container, foreground pill
+ * for the active tab. Tapping the active tab returns to the current period.
  */
 export function ViewTabs({ value, onChange }: ViewTabsProps) {
   const theme = useTheme();
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.backgroundElement }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.backgroundElement }, // bg-muted
+      ]}
       accessibilityRole="tablist"
       accessibilityLabel="Transaction view">
       {OPTIONS.map((option) => {
@@ -40,11 +41,14 @@ export function ViewTabs({ value, onChange }: ViewTabsProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             accessibilityLabel={option.value === 'month' ? 'Month view' : 'Year view'}
-            style={[styles.segment, selected && { backgroundColor: theme.text }]}>
+            style={[
+              styles.segment,
+              selected && { backgroundColor: theme.text }, // bg-foreground
+            ]}>
             <ThemedText
               style={[
                 styles.label,
-                { color: selected ? theme.background : theme.textSecondary },
+                { color: selected ? theme.background : theme.textSecondary }, // text-background / text-muted-foreground
               ]}>
               {option.label}
             </ThemedText>
@@ -58,16 +62,17 @@ export function ViewTabs({ value, onChange }: ViewTabsProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: Radius.small + 1,
-    padding: 2,
+    borderRadius: Radius.medium + 2, // rounded-lg equivalent
+    padding: 3, // p-1 = 4px, but we'll use 3 for the gap
+    gap: 2, // gap-1
   },
   segment: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.one + 1,
-    borderRadius: Radius.small,
+    paddingHorizontal: 12, // px-3 = 12px
+    paddingVertical: 6, // py-1.5 = 6px
+    borderRadius: Radius.small, // rounded-md
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14, // text-sm
+    fontWeight: '500', // font-medium
   },
 });

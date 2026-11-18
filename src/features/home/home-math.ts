@@ -29,13 +29,24 @@ export function moodOf(percent: number | null): PaceMood {
 }
 
 /**
- * The five biggest movers, whichever direction they run in.
+ * Group movers by main category, sum their deltas, then pick the five biggest.
  */
-export function culpritsOf<T extends { delta: number }>(
+export function culpritsOf<T extends { mainCategory: string; delta: number; spentToDate: number; typicalToDate: number }>(
   movers: readonly T[],
   limit = 5,
-): T[] {
-  return [...movers]
+): Array<{ mainCategory: string; delta: number; spentToDate: number; typicalToDate: number }> {
+  const byMain = new Map<string, { mainCategory: string; spentToDate: number; typicalToDate: number; delta: number }>();
+  for (const m of movers) {
+    const existing = byMain.get(m.mainCategory);
+    if (existing) {
+      existing.spentToDate += m.spentToDate;
+      existing.typicalToDate += m.typicalToDate;
+      existing.delta += m.delta;
+    } else {
+      byMain.set(m.mainCategory, { mainCategory: m.mainCategory, spentToDate: m.spentToDate, typicalToDate: m.typicalToDate, delta: m.delta });
+    }
+  }
+  return [...byMain.values()]
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, limit);
 }

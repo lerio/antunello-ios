@@ -226,12 +226,12 @@ export function BalanceChart({ anchor, embedded = false }: BalanceChartProps) {
                   <LinearGradient
                     start={vec(0, chartBounds.top)}
                     end={vec(0, chartBounds.bottom)}
-                    colors={[`${theme.tint}14`, `${theme.tint}00`]}
+                    colors={[`${theme.chartLine}14`, `${theme.chartLine}00`]}
                   />
                 </Area>
                 <Line
                   points={chartPoints.balance}
-                  color={theme.tint}
+                  color={theme.chartLine}
                   strokeWidth={2}
                   curveType="monotoneX"
                 />
@@ -240,14 +240,14 @@ export function BalanceChart({ anchor, embedded = false }: BalanceChartProps) {
                     cx={chartPoints.balance[chartPoints.balance.length - 1]?.x ?? 0}
                     cy={chartPoints.balance[chartPoints.balance.length - 1]?.y ?? 0}
                     r={4}
-                    color={theme.tint}
+                    color={theme.chartLine}
                   />
                 ) : (
                   <Circle
                     cx={chartPoints.balance[pressedIndex]?.x ?? 0}
                     cy={chartPoints.balance[pressedIndex]?.y ?? 0}
                     r={4}
-                    color={theme.tint}
+                    color={theme.chartLine}
                   />
                 )}
               </>
@@ -310,6 +310,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.large,
     paddingVertical: Spacing.three,
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   embedded: {
     paddingTop: Spacing.two,

@@ -50,7 +50,7 @@ export default function SettingsScreen() {
           ACCOUNT
         </ThemedText>
 
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
           <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
             Signed in as
           </ThemedText>
@@ -63,7 +63,7 @@ export default function SettingsScreen() {
           style={({ pressed }) => [
             styles.card,
             styles.spaced,
-            { backgroundColor: theme.card, opacity: pressed ? 0.6 : 1 },
+            { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
           ]}>
           <ThemedText>Change password</ThemedText>
         </Pressable>
@@ -74,7 +74,7 @@ export default function SettingsScreen() {
           style={({ pressed }) => [
             styles.card,
             styles.spaced,
-            { backgroundColor: theme.card, opacity: pressed ? 0.6 : 1 },
+            { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
           ]}>
           <ThemedText themeColor="destructive">Sign out</ThemedText>
         </Pressable>
@@ -83,7 +83,7 @@ export default function SettingsScreen() {
           PRIVACY
         </ThemedText>
 
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchLabel}>
               <ThemedText>Hide amounts</ThemedText>
@@ -126,7 +126,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
           <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
             Supabase project
           </ThemedText>
@@ -145,14 +145,21 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 18,
+    fontWeight: '600',
     marginTop: Spacing.three,
     marginBottom: Spacing.one,
   },
   card: {
     padding: Spacing.three,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.one,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   rowLabel: {
     fontSize: 13,

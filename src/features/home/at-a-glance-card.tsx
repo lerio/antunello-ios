@@ -28,14 +28,12 @@ function arrow(amount: number): string {
   return amount > 0 ? '▲' : amount < 0 ? '▼' : '–';
 }
 
-/** The subcategory is the useful label; the category is its context. */
-function moverParts(mover: MonthMover): {
+/** Grouped by main category — no subcategory. */
+function moverParts(mover: { mainCategory: string; delta: number }): {
   title: string;
-  subtitle: string | null;
 } {
   return {
-    title: mover.subCategory ?? mover.mainCategory,
-    subtitle: mover.subCategory ? mover.mainCategory : null,
+    title: mover.mainCategory,
   };
 }
 
@@ -93,9 +91,9 @@ export function AtAGlanceCard() {
       <View style={styles.headerRow}>
         <ThemedText
           accessibilityRole="header"
-          themeColor="textSecondary"
+          themeColor="text"
           style={styles.sectionLabel}>
-          SPENT THIS MONTH
+          Spent this month
         </ThemedText>
         <Pressable
           onPress={() => setDetailOpen((open) => !open)}
@@ -134,7 +132,17 @@ export function AtAGlanceCard() {
                         mood === 'over' ? 'above' : 'below'
                       } usual`
                 }
-                style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      mood === 'over'
+                        ? theme.expense10
+                        : mood === 'under'
+                        ? theme.income10
+                        : theme.backgroundElement,
+                  },
+                ]}>
                 <PrivacyValue style={[styles.chipText, { color: moodColor }]}>
                   {mood === 'inline'
                     ? 'In line with usual'
@@ -171,7 +179,11 @@ export function AtAGlanceCard() {
                 <View
                   style={[
                     styles.paceFill,
-                    { width: `${spentWidth}%`, backgroundColor: moodColor },
+                    {
+                      width: `${spentWidth}%`,
+                      backgroundColor:
+                        mood === 'inline' ? theme.textSecondary60 : moodColor,
+                    },
                   ]}
                 />
                 <View
@@ -197,10 +209,10 @@ export function AtAGlanceCard() {
                 vs usual
               </ThemedText>
               {culprits.map((mover) => {
-                const { title, subtitle } = moverParts(mover);
+                const { title } = moverParts(mover);
                 return (
                   <View
-                    key={`${mover.mainCategory}|${mover.subCategory ?? ''}`}
+                    key={mover.mainCategory}
                     style={styles.moverRow}>
                     <View
                       style={[
@@ -217,14 +229,6 @@ export function AtAGlanceCard() {
                       <ThemedText numberOfLines={1} style={styles.moverTitle}>
                         {title}
                       </ThemedText>
-                      {subtitle ? (
-                        <ThemedText
-                          themeColor="textSecondary"
-                          numberOfLines={1}
-                          style={styles.moverSubtitle}>
-                          {subtitle}
-                        </ThemedText>
-                      ) : null}
                     </View>
                     <PrivacyValue
                       style={[
@@ -293,8 +297,14 @@ export function AtAGlanceCard() {
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.large,
-    padding: Spacing.three,
+    padding: Spacing.four,        // 16px - matches web p-4 on mobile
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,                 // Android shadow, iOS uses shadow* props
+    borderWidth: StyleSheet.hairlineWidth,
   },
   headerRow: {
     flexDirection: 'row',
@@ -305,7 +315,7 @@ const styles = StyleSheet.create({
     padding: Spacing.two,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 18,                 // matches web text-lg (18px)
     fontWeight: '600',
   },
   heroRow: {
@@ -315,9 +325,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   total: {
-    fontSize: 32,
-    // Explicit: ThemedText's default lineHeight is 24 and would clip the glyphs.
-    lineHeight: 38,
+    fontSize: 30,                 // matches web text-3xl (30px)
+    lineHeight: 36,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },

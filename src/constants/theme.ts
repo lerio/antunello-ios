@@ -1,70 +1,89 @@
 /**
  * Design tokens for the app.
  *
- * The base palette follows the Expo template's shape (a light/dark record keyed
- * by `ThemeColor`), extended with the semantic colors this app needs to talk
- * about money. The financial values are taken from Apple's system palette so
- * they sit naturally next to native chrome and read correctly in both
- * appearances.
- *
- * Money colors are semantic, never literal: read `theme.income` / `theme.expense`
- * rather than a hex value, so a palette change lands in one place.
+ * Matches the web app's shadcn/ui HSL palette (converted to RGB hex) so both
+ * clients are visually identical. Money colors use the web app's --positive/
+ * --negative/--warning tokens.
  */
 
 import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    textSecondary: '#60646C',
-    /** The web app's page background (Tailwind gray-50). */
-    background: '#F9FAFB',
-    /** The top bar, including the status-bar area behind it. */
+    text: '#0A0A0A',           // foreground: 0 0% 3.9%
+    textSecondary: '#737373',  // muted-foreground: 0 0% 45.1%
+    textSecondary60: '#73737399', // 60% opacity for pace bar inline (web `bg-muted-foreground/60`)
+    /** Chart line/fill — matches web `hsl(var(--foreground))`. */
+    chartLine: '#0A0A0A',
+    /** Page background — matches web body `bg-gray-50`. */
+    background: '#F9FAFB',     // gray-50
+    /** Top bar background — matches web header `bg-white`. */
     header: '#FFFFFF',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    card: '#FFFFFF',
-    separator: '#E5E5EA',
-    /** Accent: black in light, white in dark — never system blue. */
-    tint: '#000000',
-    /** Text and icons drawn on top of `tint`. */
-    onTint: '#FFFFFF',
+    /** Muted/secondary surfaces — matches web `bg-muted`. */
+    backgroundElement: '#F5F5F5',  // muted: 0 0% 96.1%
+    backgroundSelected: '#E5E5E5',
+    /** Card surface — matches web `bg-card` (white). */
+    card: '#FFFFFF',           // card: 0 0% 100%
+    /** Borders — matches web `border-border`. */
+    separator: '#E5E5E5',      // border: 0 0% 89.8%
+    /** Accent (primary actions) — matches web `bg-primary`. */
+    tint: '#171717',           // primary: 0 0% 9%
+    /** Text on accent. */
+    onTint: '#FAFAFA',         // primary-foreground: 0 0% 98%
 
-    /** Money in. */
-    income: '#248A3D',
-    /** Money out. */
-    expense: '#D70015',
+    /** Money in — matches web `--positive` (142 72% 29%). */
+    income: '#166534',
+    /** Money out — matches web `--negative` (0 72% 42%). */
+    expense: '#B91C1C',
+    /** 10% opacity for chip backgrounds (web `bg-positive/10`). */
+    income10: '#1665341A',
+    /** 10% opacity for chip backgrounds (web `bg-negative/10`). */
+    expense10: '#B91C1C1A',
     /** Movements between funds — neither a gain nor a loss. */
-    transfer: '#8E8E93',
-    /** Approaching a budget limit, or a non-blocking warning. */
-    warning: '#C93400',
-    /** Destructive actions, and budgets past their limit. */
-    destructive: '#D70015',
+    transfer: '#525252',
+    /** Approaching a budget limit — matches web `--warning` (32 95% 37%). */
+    warning: '#B45309',
+    /** Destructive actions — matches web `--destructive` (0 84.2% 60.2%). */
+    destructive: '#DC2626',
   },
   dark: {
-    text: '#ffffff',
-    textSecondary: '#B0B4BA',
-    /** The web app's page background (Tailwind gray-900). */
-    background: '#101828',
-    /** The top bar, including the status-bar area behind it. */
-    header: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    /** The web app's card surface (Tailwind gray-800). */
-    card: '#1E2939',
-    separator: '#38383A',
-    tint: '#FFFFFF',
-    onTint: '#000000',
+    text: '#FAFAFA',           // foreground: 0 0% 98%
+    textSecondary: '#A3A3A3',  // muted-foreground: 0 0% 63.9%
+    textSecondary60: '#A3A3A399', // 60% opacity for pace bar inline (web `bg-muted-foreground/60`)
+    /** Chart line/fill — matches web dark `hsl(var(--foreground))`. */
+    chartLine: '#FAFAFA',
+    /** Page background — matches web body `bg-gray-900`. */
+    background: '#101828',     // gray-900
+    /** Top bar background — matches web header `bg-gray-800`. */
+    header: '#1E2939',         // gray-800
+    /** Muted/secondary surfaces — matches web dark `bg-muted`. */
+    backgroundElement: '#18181B',  // muted: 0 0% 14.9%
+    backgroundSelected: '#27272A',
+    /** Card surface — matches web dark `bg-card` (gray-800). */
+    card: '#1E2939',           // gray-800
+    /** Borders — matches web dark `border-border`. */
+    separator: '#27272A',      // border: 0 0% 14.9%
+    tint: '#FAFAFA',           // primary: 0 0% 98%
+    onTint: '#171717',         // primary-foreground: 0 0% 9%
 
-    income: '#30D158',
-    expense: '#FF453A',
-    transfer: '#98989D',
-    warning: '#FF9F0A',
-    destructive: '#FF453A',
+    /** Money in — matches web dark `--positive` (142 69% 58%). */
+    income: '#4ADE80',
+    /** Money out — matches web dark `--negative` (0 91% 71%). */
+    expense: '#F87171',
+    /** 10% opacity for chip backgrounds (web `bg-positive/10`). */
+    income10: '#4ADE801A',
+    /** 10% opacity for chip backgrounds (web `bg-negative/10`). */
+    expense10: '#F871711A',
+    transfer: '#A3A3A3',
+    /** Warning — matches web dark `--warning` (38 92% 50%). */
+    warning: '#FBBF24',
+    destructive: '#EF4444',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+
+export type SemanticColor = 'income' | 'expense' | 'transfer' | 'warning' | 'destructive';
 
 /**
  * System font descriptors. These are iOS-only names, which is one reason this

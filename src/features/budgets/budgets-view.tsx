@@ -44,7 +44,7 @@ export function BudgetsView() {
         ) : isError ? (
           <EmptyState
             style={styles.empty}
-            title="Couldn’t load budgets"
+            title="Couldn't load budgets"
             detail={error instanceof Error ? error.message : 'Unknown error'}
           />
         ) : items.length === 0 ? (
@@ -82,9 +82,8 @@ export function BudgetsView() {
 /**
  * One budget.
  *
- * The whole card opens the edit sheet, rather than a pencil in the corner as on
- * the web: a 20-point icon is not a comfortable target, and a card has nothing
- * else to be tapped for.
+ * Matches the web app's BudgetCard: shadow-sm, rounded-2xl, p-4 on mobile.
+ * The whole card opens the edit sheet.
  */
 function BudgetCard({
   item,
@@ -175,10 +174,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.five,
   },
   card: {
-    padding: Spacing.three,
-    borderRadius: Radius.medium,
+    padding: Spacing.four,          // 16px = p-4 on mobile
+    borderRadius: Radius.large + 4, // rounded-2xl = 20px (large=16 + 4)
     borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   cardHead: {
     flexDirection: 'row',
@@ -187,27 +191,27 @@ const styles = StyleSheet.create({
   },
   category: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 18,    // text-lg
     fontWeight: '600',
   },
   percentage: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 14,    // text-sm
+    fontWeight: '600', // font-medium equivalent
     fontVariant: ['tabular-nums'],
   },
   limit: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 30,    // text-3xl
+    fontWeight: '600', // font-semibold
     fontVariant: ['tabular-nums'],
   },
   track: {
-    height: 8,
-    borderRadius: 4,
+    height: 8,       // h-2
+    borderRadius: 99, // rounded-full
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 99,
   },
   figures: {
     flexDirection: 'row',
@@ -216,7 +220,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   figure: {
-    fontSize: 12,
+    fontSize: 12,    // text-xs
     fontVariant: ['tabular-nums'],
   },
   addButton: {
