@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import { CardIconButton } from '@/components/card';
 import { PickerSheet } from '@/components/picker-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -10,7 +11,6 @@ import { useFunds } from '@/features/funds/use-funds';
 import type { IntegrationSettingsPatch } from '@/features/settings/integration-settings';
 import type { IntegrationConfig } from '@/features/settings/integration-status';
 import { requestSync, useUpdateIntegrationSettings } from '@/features/settings/mutations';
-import { formatSync } from '@/features/settings/relative-time';
 import { messageOf } from '@/lib/errors';
 import { qk } from '@/lib/query-keys';
 import { useTheme } from '@/hooks/use-theme';
@@ -19,38 +19,12 @@ import { useTheme } from '@/hooks/use-theme';
 type OpenPicker = 'fund' | 'wealthFund' | null;
 
 /**
- * One connected account: its sync state and what it maps to.
- *
- * Everything here is per *account* rather than per bank, because a bank can have
- * several — Revolut IT and Revolut NL are two connections with their own fund
- * mappings, and a single row per bank could not express that.
+ * Fetches an account's transactions now. Lives in the bank card's title row,
+ * next to the connect/disconnect button, like web.
  */
-export function AccountControls({
-  config,
-}: {
-  config: IntegrationConfig;
-}) {
-  const theme = useTheme();
+export function SyncButton({ config, bankName }: { config: IntegrationConfig; bankName: string }) {
   const queryClient = useQueryClient();
-  const { data: funds = [] } = useFunds();
-  const updateSettings = useUpdateIntegrationSettings();
-
-  const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
   const [isSyncing, setSyncing] = useState(false);
-
-  const settings = config.settings ?? {};
-  const fundName = (id: string | null | undefined) =>
-    funds.find((fund) => fund.id === id)?.name ?? 'None';
-
-  const isTradeRepublic = config.provider === 'trade_republic';
-  const expired = settings.auth_status === 'session_expired';
-
-  function patch(changes: IntegrationSettingsPatch) {
-    updateSettings.mutate(
-      { config, patch: changes },
-      { onError: (error) => Alert.alert('Could not save', messageOf(error)) },
-    );
-  }
 
   async function handleFetch() {
     setSyncing(true);
@@ -69,7 +43,7 @@ export function AccountControls({
       }
 
       // A sync moves both of the things this screen does not own: the queue the
-      // tab badge and the banner read, and the timestamp in the row above. Left
+      // tab badge and the banner read, and the timestamp on the integration. Left
       // alone, the app would announce new transactions and then show a badge of
       // zero until the app was backgrounded.
       void queryClient.invalidateQueries({ queryKey: qk.pending() });
@@ -81,101 +55,71 @@ export function AccountControls({
     }
   }
 
+  return (
+    <CardIconButton
+      symbol="arrow.clockwise"
+      label={`Fetch ${bankName} transactions now`}
+      onPress={handleFetch}
+      loading={isSyncing}
+    />
+  );
+}
+
+/**
+ * One connected account's fund mapping.
+ *
+ * Everything here is per *account* rather than per bank, because a bank can have
+ * several — Revolut IT and Revolut NL are two connections with their own fund
+ * mappings, and a single row per bank could not express that. No container of
+ * its own: the fields sit directly in the bank's card.
+ */
+export function AccountControls({
+  config,
+}: {
+  config: IntegrationConfig;
+}) {
+  const { data: funds = [] } = useFunds();
+  const updateSettings = useUpdateIntegrationSettings();
+
+  const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
+
+  const settings = config.settings ?? {};
+  const fundName = (id: string | null | undefined) =>
+    funds.find((fund) => fund.id === id)?.name ?? 'None';
+
+  const isTradeRepublic = config.provider === 'trade_republic';
+
+  function patch(changes: IntegrationSettingsPatch) {
+    updateSettings.mutate(
+      { config, patch: changes },
+      { onError: (error) => Alert.alert('Could not save', messageOf(error)) },
+    );
+  }
+
   const fundOptions = [
     { value: '', label: 'None' },
     ...funds.map((fund) => ({ value: fund.id, label: fund.name, detail: fund.currency })),
   ];
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.card, borderColor: theme.separator },
-      ]}>
-      <View style={styles.identity}>
-        <SymbolView
-          name="checkmark.circle"
-          size={16}
-          tintColor={expired ? theme.warning : theme.income}
-        />
-        <View style={styles.identityText}>
-          <View style={styles.chips}>
-            {settings.iban ? (
-              <View style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText style={styles.chipMono}>{settings.iban}</ThemedText>
-              </View>
-            ) : null}
-            {settings.currency ? (
-              <View style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText style={styles.chipLabel}>{settings.currency}</ThemedText>
-              </View>
-            ) : null}
-          </View>
-          <ThemedText themeColor="textSecondary" style={styles.accountId}>
-            {config.account_id}
-          </ThemedText>
-        </View>
-      </View>
-
-      <View style={[styles.syncRow, { borderTopColor: theme.separator }]}>
-        <View style={styles.syncText}>
-          <ThemedText themeColor="textSecondary" style={styles.lastSync}>
-            {config.last_sync_at ? `Last synced ${formatSync(config.last_sync_at)}` : 'Never synced'}
-          </ThemedText>
-        </View>
-
-        <Pressable
-          onPress={handleFetch}
-          disabled={isSyncing}
-          accessibilityRole="button"
-          accessibilityLabel="Fetch transactions now"
-          style={({ pressed }) => [
-            styles.fetchButton,
-            { backgroundColor: theme.backgroundElement, opacity: isSyncing || pressed ? 0.5 : 1 },
-          ]}>
-          {isSyncing ? (
-            <ActivityIndicator size="small" />
-          ) : (
-            <>
-              <SymbolView name="arrow.clockwise" size={13} tintColor={theme.tint} />
-              <ThemedText themeColor="tint" style={styles.fetchLabel}>
-                Fetch now
-              </ThemedText>
-            </>
-          )}
-        </Pressable>
-      </View>
-
+    <View style={styles.container}>
       <FieldRow
-        label="Link to fund"
+        label="Link to Fund"
         value={fundName(settings.fund_category_id)}
         onPress={() => setOpenPicker('fund')}
       />
 
       {isTradeRepublic ? (
         <FieldRow
-          label="Saveback / Round-up fund"
+          label="Saveback / Round-up Fund"
           value={fundName(settings.wealth_fund_category_id)}
           onPress={() => setOpenPicker('wealthFund')}
         />
       ) : null}
 
-      <View style={styles.switchRow}>
-        <View style={styles.switchLabel}>
-          <ThemedText style={styles.switchTitle}>Bulk fetch</ThemedText>
-          <ThemedText themeColor="textSecondary" style={styles.switchHint}>
-            Import the whole history rather than recent activity.
-          </ThemedText>
-        </View>
-        <Switch
-          value={settings.bulk_fetch_enabled === true}
-          onValueChange={(value) => patch({ bulk_fetch_enabled: value })}
-        />
-      </View>
-
       <PickerSheet
         visible={openPicker === 'fund'}
-        title="Link to fund"
+        title="Link to Fund"
         options={fundOptions}
         selected={settings.fund_category_id ?? ''}
         onSelect={(value) => patch({ fund_category_id: value })}
@@ -185,7 +129,7 @@ export function AccountControls({
 
       <PickerSheet
         visible={openPicker === 'wealthFund'}
-        title="Saveback / Round-up fund"
+        title="Saveback / Round-up Fund"
         options={fundOptions}
         selected={settings.wealth_fund_category_id ?? ''}
         onSelect={(value) => patch({ wealth_fund_category_id: value })}
@@ -196,7 +140,7 @@ export function AccountControls({
   );
 }
 
-/** A tappable row that opens a picker. */
+/** A labelled select: small label above, the value and a chevron in the field. */
 function FieldRow({
   label,
   value,
@@ -209,88 +153,37 @@ function FieldRow({
   const theme = useTheme();
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
-      style={({ pressed }) => [
-        styles.fieldRow,
-        { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.6 : 1 },
-      ]}>
+    <View style={styles.field}>
       <ThemedText themeColor="textSecondary" style={styles.fieldLabel}>
         {label}
       </ThemedText>
-      <ThemedText style={styles.fieldValue} numberOfLines={1}>
-        {value}
-      </ThemedText>
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+        style={({ pressed }) => [
+          styles.fieldRow,
+          { borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
+        ]}>
+        <ThemedText style={styles.fieldValue} numberOfLines={1}>
+          {value}
+        </ThemedText>
+        <SymbolView name="chevron.down" size={13} tintColor={theme.textSecondary} />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: Radius.medium,
     gap: Spacing.three,
   },
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-  },
-  identityText: {
-    flex: 1,
+  field: {
     gap: Spacing.one,
   },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.one,
-  },
-  chip: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
-    borderRadius: Radius.small,
-  },
-  chipMono: {
+  fieldLabel: {
     fontSize: 12,
-    fontFamily: 'ui-monospace',
-  },
-  chipLabel: {
-    fontSize: 12,
-  },
-  syncRow: {
-    paddingTop: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  syncText: {
-    flex: 1,
-    gap: 1,
-  },
-  accountId: {
-    fontSize: 11,
-    fontFamily: 'ui-monospace',
-  },
-  lastSync: {
-    fontSize: 12,
-  },
-  fetchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    minWidth: 108,
-    height: 32,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Radius.small + 2,
-  },
-  fetchLabel: {
-    fontSize: 14,
+    lineHeight: 16,
     fontWeight: '500',
   },
   fieldRow: {
@@ -299,33 +192,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
     height: 40,
-    paddingHorizontal: Spacing.two + 2,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.small + 2,
-  },
-  fieldLabel: {
-    fontSize: 14,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   fieldValue: {
     flexShrink: 1,
     fontSize: 14,
-    fontWeight: '500',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  switchLabel: {
-    flex: 1,
-    gap: 1,
-  },
-  switchTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  switchHint: {
-    fontSize: 12,
+    lineHeight: 20,
   },
 });

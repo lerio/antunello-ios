@@ -3,7 +3,7 @@
  *
  * The absent-versus-empty distinction is the whole point. A patch naming one
  * field must leave the others alone — changing a fund mapping cannot disturb the
- * bulk-fetch toggle — while an empty value must still clear a mapping, or a
+ * other mapping — while an empty value must still clear a mapping, or a
  * mapping could never be removed.
  *
  * Run: npm test
@@ -19,7 +19,7 @@ const stored: IntegrationSettings = {
   bank_name: 'Revolut Bank',
   iban: 'IT60X0542811101000000123456',
   fund_category_id: 'fund-cash',
-  bulk_fetch_enabled: true,
+  wealth_fund_category_id: 'fund-wealth',
 };
 
 describe('merging a partial update', () => {
@@ -27,15 +27,15 @@ describe('merging a partial update', () => {
     const merged = mergeIntegrationSettings(stored, { fund_category_id: 'fund-new' });
 
     assert.equal(merged.fund_category_id, 'fund-new');
-    assert.equal(merged.bulk_fetch_enabled, true, 'untouched');
+    assert.equal(merged.wealth_fund_category_id, 'fund-wealth', 'untouched');
     assert.equal(merged.bank_name, 'Revolut Bank', 'untouched');
     assert.equal(merged.iban, stored.iban, 'untouched');
   });
 
-  it('changes the bulk-fetch toggle without disturbing a mapping', () => {
-    const merged = mergeIntegrationSettings(stored, { bulk_fetch_enabled: false });
+  it('changes the wealth mapping without disturbing the cash mapping', () => {
+    const merged = mergeIntegrationSettings(stored, { wealth_fund_category_id: 'fund-new' });
 
-    assert.equal(merged.bulk_fetch_enabled, false);
+    assert.equal(merged.wealth_fund_category_id, 'fund-new');
     assert.equal(merged.fund_category_id, 'fund-cash');
   });
 
@@ -102,7 +102,7 @@ describe('merging a partial update', () => {
     // name, whatever a future version adds. A merge that dropped them would
     // disconnect the account.
     const withUnknown = { ...stored, something_new: 'kept' } as IntegrationSettings;
-    const merged = mergeIntegrationSettings(withUnknown, { bulk_fetch_enabled: false });
+    const merged = mergeIntegrationSettings(withUnknown, { fund_category_id: 'fund-new' });
 
     assert.equal((merged as Record<string, unknown>).something_new, 'kept');
   });

@@ -2,7 +2,7 @@ import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { Card } from '@/components/card';
+import { Card, CardIconButton } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { Layout, Radius, Spacing } from '@/constants/theme';
 import {
@@ -12,7 +12,7 @@ import {
   type BankDefinition,
   type IntegrationConfig,
 } from '@/features/settings/integration-status';
-import { AccountControls } from '@/features/settings/components/account-controls';
+import { AccountControls, SyncButton } from '@/features/settings/components/account-controls';
 import { useIntegrations } from '@/features/settings/use-integrations';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -44,31 +44,34 @@ export function BankIntegrations() {
 
   return (
     <>
-      <Card style={styles.card}>
-        <View style={styles.titleRow}>
-          <ThemedText accessibilityRole="header" style={styles.sectionLabel}>
-            Bank Integrations
-          </ThemedText>
-        </View>
+      {/* The settings menu: plain text tabs, like the Month/Year selector. */}
+      <View style={styles.tabs} accessibilityRole="tablist">
+        <ThemedText
+          accessibilityRole="tab"
+          accessibilityState={{ selected: true }}
+          style={styles.tab}>
+          Banks
+        </ThemedText>
+      </View>
 
-        {isLoading ? <ActivityIndicator /> : null}
+      {isLoading ? <ActivityIndicator /> : null}
 
-        {isError ? (
-          <ThemedText themeColor="destructive">
-            Couldn&apos;t load your bank connections.
-          </ThemedText>
-        ) : null}
+      {isError ? (
+        <ThemedText themeColor="destructive">
+          Couldn&apos;t load your bank connections.
+        </ThemedText>
+      ) : null}
 
-        {accounts
-          ? SUPPORTED_BANKS.map((bank) => (
-              <BankRow
-                key={bank.name}
-                bank={bank}
-                accounts={accounts}
-              />
-            ))
-          : null}
-      </Card>
+      {accounts
+        ? SUPPORTED_BANKS.map((bank) => (
+            <BankRow
+              key={bank.name}
+              bank={bank}
+              accounts={accounts}
+              onOpenWeb={openWebSettings}
+            />
+          ))
+        : null}
 
       <Pressable
         onPress={openWebSettings}
@@ -93,13 +96,15 @@ export function BankIntegrations() {
   );
 }
 
-/** One bank: its name, its status, and a control block per connected account. */
+/** One bank card: name and status, the icon buttons, then a fund mapping per account. */
 function BankRow({
   bank,
   accounts,
+  onOpenWeb,
 }: {
   bank: BankDefinition;
   accounts: IntegrationConfig[];
+  onOpenWeb: () => void;
 }) {
   const theme = useTheme();
 
@@ -108,22 +113,10 @@ function BankRow({
   const expired = hasExpiredSession(accounts, bank.name);
 
   return (
-    <View
-      style={[
-        styles.row,
-        {
-          backgroundColor: theme.backgroundElement,
-          borderColor: theme.separator,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderRadius: Radius.medium,
-        },
-      ]}>
-      <View style={styles.rowText}>
-        <View style={styles.rowHead}>
+    <Card style={styles.row}>
+      <View style={styles.rowHead}>
+        <View style={styles.rowTitle}>
           <ThemedText style={styles.bankName}>{bank.name}</ThemedText>
-          <ThemedText themeColor="textSecondary" style={styles.country}>
-            {bank.country}
-          </ThemedText>
           {connected ? (
             <StatusPill
               label="Connected"
@@ -136,20 +129,24 @@ function BankRow({
           ) : null}
         </View>
 
-        <ThemedText themeColor="textSecondary" style={styles.detail}>
-          {bank.description}
-        </ThemedText>
+        <View style={styles.actions}>
+          {/* One sync per account: a bank can have several. */}
+          {connections.map((config) => (
+            <SyncButton key={config.id} config={config} bankName={bank.name} />
+          ))}
+          {/* Connecting and disconnecting happen in the browser (see above). */}
+          <CardIconButton
+            symbol={connected ? 'bolt.slash' : 'powerplug'}
+            label={connected ? `Disconnect ${bank.name} in the browser` : `Connect ${bank.name} in the browser`}
+            onPress={onOpenWeb}
+          />
+        </View>
       </View>
 
-      {/* One block per account: a bank can have several, each with its own fund
-          mapping and its own sync. */}
       {connections.map((config) => (
-        <AccountControls
-          key={config.id}
-          config={config}
-        />
+        <AccountControls key={config.id} config={config} />
       ))}
-    </View>
+    </Card>
   );
 }
 
@@ -179,36 +176,44 @@ function StatusPill({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    gap: Layout.cardGap,
+  tabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    // Pull the first card up to the tabs: the stack gap is for sibling cards.
+    marginBottom: -(Layout.stackGap - Layout.cardGap),
   },
-  titleRow: {
-    height: Layout.iconButton,
-    justifyContent: 'center',
-  },
-  sectionLabel: {
+  tab: {
     fontSize: 18,
+    lineHeight: 28,
     fontWeight: '600',
   },
   row: {
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
-  rowText: {
-    gap: Spacing.half,
+    gap: Layout.stackGap,
   },
   rowHead: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: Layout.iconButton,
+    gap: Spacing.two,
+  },
+  rowTitle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
-    gap: Spacing.one + 2,
+    gap: Spacing.two,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   bankName: {
-    fontSize: 16,
+    fontSize: 18,
+    lineHeight: 28,
     fontWeight: '600',
-  },
-  country: {
-    fontSize: 12,
   },
   pills: {
     flexDirection: 'row',
@@ -223,9 +228,6 @@ const styles = StyleSheet.create({
   pillLabel: {
     fontSize: 11,
     fontWeight: '600',
-  },
-  detail: {
-    fontSize: 13,
   },
   button: {
     flexDirection: 'row',

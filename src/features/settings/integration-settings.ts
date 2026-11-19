@@ -8,8 +8,8 @@
  *
  * The merge is the part worth reproducing carefully: **a key that is absent from
  * the patch is left alone, while a key present and empty is cleared.** The
- * settings page sends one field at a time — changing a fund mapping must not
- * disturb the bulk-fetch toggle — but it also has to be able to unset a mapping,
+ * settings page sends one field at a time — changing one fund mapping must not
+ * disturb the other — but it also has to be able to unset a mapping,
  * which it does by sending an empty value. Treating an empty value as "no
  * change" would make a mapping impossible to remove.
  */
@@ -20,7 +20,6 @@ import type { IntegrationSettings } from '@/features/settings/integration-status
 export type IntegrationSettingsPatch = {
   fund_category_id?: string | null;
   wealth_fund_category_id?: string | null;
-  bulk_fetch_enabled?: boolean;
 };
 
 /**
@@ -45,10 +44,6 @@ export function mergeIntegrationSettings(
 
   if (patch.wealth_fund_category_id !== undefined) {
     merged.wealth_fund_category_id = patch.wealth_fund_category_id || null;
-  }
-
-  if (patch.bulk_fetch_enabled !== undefined) {
-    merged.bulk_fetch_enabled = patch.bulk_fetch_enabled;
   }
 
   return merged;

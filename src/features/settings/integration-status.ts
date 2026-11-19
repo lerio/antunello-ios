@@ -40,8 +40,6 @@ export type IntegrationSettings = {
   fund_category_id?: string | null;
   /** Trade Republic only: the fund its saveback and round-up credit. */
   wealth_fund_category_id?: string | null;
-  /** Whether the sync imports the whole history rather than recent activity. */
-  bulk_fetch_enabled?: boolean;
 };
 
 export type BankDefinition = {

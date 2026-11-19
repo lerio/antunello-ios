@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { CardShadow, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,6 +58,37 @@ export function CardToggle({ open, onPress, openLabel, closedLabel }: CardToggle
         size={13}
         tintColor={theme.textSecondary}
       />
+    </Pressable>
+  );
+}
+
+type CardIconButtonProps = {
+  symbol: SymbolViewProps['name'];
+  label: string;
+  onPress: () => void;
+  loading?: boolean;
+};
+
+/**
+ * A 32×32 ghost icon button for a card's title row: web's `h-8 w-8` ghost
+ * button (the budget card's pen). `hitSlop` keeps the tap target at 44.
+ */
+export function CardIconButton({ symbol, label, onPress, loading = false }: CardIconButtonProps) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={loading}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.toggle, { opacity: loading || pressed ? 0.5 : 1 }]}>
+      {loading ? (
+        <ActivityIndicator size="small" />
+      ) : (
+        <SymbolView name={symbol} size={16} tintColor={theme.textSecondary} />
+      )}
     </Pressable>
   );
 }

@@ -350,7 +350,7 @@ screen opens, which is soon enough for data that arrives on a cron.
 
 ### Bank connections
 
-Fund mappings, the bulk-fetch toggle and a sync are all available in the app.
+Fund mappings and a sync are all available in the app. Bulk fetch has no toggle: it runs for every connected account with a fund linked.
 Connecting, re-authenticating and disconnecting are not — those open the browser.
 That is not a shortcut: the Enable Banking flow signs a JWT with a private key
 that must never ship on a device, and Trade Republic's needs a phone number, a
