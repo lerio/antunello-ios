@@ -27,11 +27,8 @@ type OpenPicker = 'fund' | 'wealthFund' | null;
  */
 export function AccountControls({
   config,
-  /** Shown above the controls when a bank has more than one account. */
-  showAccountId,
 }: {
   config: IntegrationConfig;
-  showAccountId: boolean;
 }) {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -46,6 +43,7 @@ export function AccountControls({
     funds.find((fund) => fund.id === id)?.name ?? 'None';
 
   const isTradeRepublic = config.provider === 'trade_republic';
+  const expired = settings.auth_status === 'session_expired';
 
   function patch(changes: IntegrationSettingsPatch) {
     updateSettings.mutate(
@@ -89,14 +87,38 @@ export function AccountControls({
   ];
 
   return (
-    <View style={[styles.container, { borderTopColor: theme.separator }]}>
-      <View style={styles.syncRow}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.card, borderColor: theme.separator },
+      ]}>
+      <View style={styles.identity}>
+        <SymbolView
+          name="checkmark.circle"
+          size={16}
+          tintColor={expired ? theme.warning : theme.income}
+        />
+        <View style={styles.identityText}>
+          <View style={styles.chips}>
+            {settings.iban ? (
+              <View style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText style={styles.chipMono}>{settings.iban}</ThemedText>
+              </View>
+            ) : null}
+            {settings.currency ? (
+              <View style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText style={styles.chipLabel}>{settings.currency}</ThemedText>
+              </View>
+            ) : null}
+          </View>
+          <ThemedText themeColor="textSecondary" style={styles.accountId}>
+            {config.account_id}
+          </ThemedText>
+        </View>
+      </View>
+
+      <View style={[styles.syncRow, { borderTopColor: theme.separator }]}>
         <View style={styles.syncText}>
-          {showAccountId ? (
-            <ThemedText themeColor="textSecondary" style={styles.accountId} numberOfLines={1}>
-              {config.account_id}
-            </ThemedText>
-          ) : null}
           <ThemedText themeColor="textSecondary" style={styles.lastSync}>
             {config.last_sync_at ? `Last synced ${formatSync(config.last_sync_at)}` : 'Never synced'}
           </ThemedText>
@@ -207,12 +229,40 @@ function FieldRow({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: Spacing.two,
-    paddingTop: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    padding: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.medium,
+    gap: Spacing.three,
+  },
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: Spacing.two,
   },
+  identityText: {
+    flex: 1,
+    gap: Spacing.one,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
+  },
+  chip: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.small,
+  },
+  chipMono: {
+    fontSize: 12,
+    fontFamily: 'ui-monospace',
+  },
+  chipLabel: {
+    fontSize: 12,
+  },
   syncRow: {
+    paddingTop: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

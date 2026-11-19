@@ -7,13 +7,11 @@ import { Radius, Spacing } from '@/constants/theme';
 import {
   connectionsFor,
   hasExpiredSession,
-  lastSyncFor,
   SUPPORTED_BANKS,
   type BankDefinition,
   type IntegrationConfig,
 } from '@/features/settings/integration-status';
 import { AccountControls } from '@/features/settings/components/account-controls';
-import { formatSync } from '@/features/settings/relative-time';
 import { useIntegrations } from '@/features/settings/use-integrations';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -65,12 +63,11 @@ export function BankIntegrations() {
         ) : null}
 
         {accounts
-          ? SUPPORTED_BANKS.map((bank, index) => (
+          ? SUPPORTED_BANKS.map((bank) => (
               <BankRow
                 key={bank.name}
                 bank={bank}
                 accounts={accounts}
-                isLast={index === SUPPORTED_BANKS.length - 1}
               />
             ))
           : null}
@@ -103,27 +100,26 @@ export function BankIntegrations() {
 function BankRow({
   bank,
   accounts,
-  isLast,
 }: {
   bank: BankDefinition;
   accounts: IntegrationConfig[];
-  isLast: boolean;
 }) {
   const theme = useTheme();
 
   const connections = connectionsFor(accounts, bank.name);
   const connected = connections.length > 0;
   const expired = hasExpiredSession(accounts, bank.name);
-  const lastSync = lastSyncFor(accounts, bank.name);
-
-  const rowBackground = connected ? theme.backgroundElement : 'transparent';
 
   return (
     <View
       style={[
         styles.row,
-        { backgroundColor: rowBackground, borderRadius: Radius.medium },
-        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator },
+        {
+          backgroundColor: theme.backgroundElement,
+          borderColor: theme.separator,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderRadius: Radius.medium,
+        },
       ]}>
       <View style={styles.rowText}>
         <View style={styles.rowHead}>
@@ -144,7 +140,7 @@ function BankRow({
         </View>
 
         <ThemedText themeColor="textSecondary" style={styles.detail}>
-          {connected && lastSync ? `Last synced ${formatSync(lastSync)}` : bank.description}
+          {bank.description}
         </ThemedText>
       </View>
 
@@ -154,7 +150,6 @@ function BankRow({
         <AccountControls
           key={config.id}
           config={config}
-          showAccountId={connections.length > 1}
         />
       ))}
     </View>
@@ -190,7 +185,7 @@ const styles = StyleSheet.create({
   card: {
     padding: Spacing.three,
     borderRadius: Radius.large,
-    gap: Spacing.two,
+    gap: Spacing.three,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -203,8 +198,7 @@ const styles = StyleSheet.create({
   },
   row: {
     padding: Spacing.three,
-    marginHorizontal: -Spacing.three,
-    marginVertical: Spacing.one,
+    gap: Spacing.three,
   },
   rowText: {
     gap: Spacing.half,
