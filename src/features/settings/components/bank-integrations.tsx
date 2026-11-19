@@ -2,8 +2,9 @@ import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Layout, Radius, Spacing } from '@/constants/theme';
 import {
   connectionsFor,
   hasExpiredSession,
@@ -43,16 +44,12 @@ export function BankIntegrations() {
 
   return (
     <>
-      <View style={[
-        styles.card,
-        { backgroundColor: theme.card, borderColor: theme.separator, borderWidth: StyleSheet.hairlineWidth },
-      ]}>
-        <ThemedText
-          accessibilityRole="header"
-          themeColor="textSecondary"
-          style={styles.sectionLabel}>
-          BANK INTEGRATIONS
-        </ThemedText>
+      <Card style={styles.card}>
+        <View style={styles.titleRow}>
+          <ThemedText accessibilityRole="header" style={styles.sectionLabel}>
+            Bank Integrations
+          </ThemedText>
+        </View>
 
         {isLoading ? <ActivityIndicator /> : null}
 
@@ -71,7 +68,7 @@ export function BankIntegrations() {
               />
             ))
           : null}
-      </View>
+      </Card>
 
       <Pressable
         onPress={openWebSettings}
@@ -183,14 +180,11 @@ function StatusPill({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.three,
-    borderRadius: Radius.large,
-    gap: Spacing.three,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: Layout.cardGap,
+  },
+  titleRow: {
+    height: Layout.iconButton,
+    justifyContent: 'center',
   },
   sectionLabel: {
     fontSize: 18,

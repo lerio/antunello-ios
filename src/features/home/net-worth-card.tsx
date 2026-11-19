@@ -1,15 +1,14 @@
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { Card, CardToggle } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { BalanceChart } from '@/features/balance/balance-chart';
 import { useFundBalances } from '@/features/funds/use-fund-balances';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
-import { useTheme } from '@/hooks/use-theme';
 import { messageOf } from '@/lib/errors';
 
 /** Today as `20 Oct`, the same shape the web app uses. */
@@ -28,21 +27,12 @@ function todayLabel(): string {
  * printed above it.
  */
 export function NetWorthCard() {
-  const theme = useTheme();
   const router = useRouter();
   const { data, isLoading, error } = useFundBalances();
   const [chartOpen, setChartOpen] = useState(false);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.separator,
-          borderWidth: StyleSheet.hairlineWidth,
-        },
-      ]}>
+    <Card>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <ThemedText
@@ -77,19 +67,12 @@ export function NetWorthCard() {
           )}
         </View>
 
-        <Pressable
+        <CardToggle
+          open={chartOpen}
           onPress={() => setChartOpen((open) => !open)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: chartOpen }}
-          accessibilityLabel={chartOpen ? 'Hide chart' : 'Show chart'}
-          style={styles.toggle}>
-          <SymbolView
-            name={chartOpen ? 'chevron.up' : 'chevron.down'}
-            size={13}
-            tintColor={theme.textSecondary}
-          />
-        </Pressable>
+          openLabel="Hide chart"
+          closedLabel="Show chart"
+        />
       </View>
 
       {error ? (
@@ -99,36 +82,20 @@ export function NetWorthCard() {
       ) : null}
 
       {chartOpen && data ? <BalanceChart anchor={data.totalEUR} embedded /> : null}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.large,
-    padding: Spacing.four,        // 16px - matches web p-4 on mobile
-    gap: Spacing.two,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 0,         // padding now on card
-    paddingVertical: 0,
     gap: Spacing.two,
   },
   headerLeft: {
     flex: 1,
     gap: Spacing.half,
-  },
-  toggle: {
-    padding: Spacing.two,
   },
   sectionLabel: {
     fontSize: 18,                 // matches web text-lg (18px)

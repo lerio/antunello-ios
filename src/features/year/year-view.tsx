@@ -4,8 +4,9 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 import { ChipStrip } from '@/components/chip-strip';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import { ActivityControls } from '@/features/transactions/components/activity-controls';
@@ -315,12 +316,6 @@ function CategoryRow({
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
-
-  return <View style={[styles.card, { backgroundColor: theme.card }]}>{children}</View>;
-}
-
 const styles = StyleSheet.create({
   viewTabs: {
     paddingTop: Spacing.three,
@@ -337,11 +332,6 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: Spacing.five,
-  },
-  card: {
-    borderRadius: Radius.medium,
-    padding: Spacing.three,
-    gap: Spacing.one,
   },
   cardHeader: {
     flexDirection: 'row',

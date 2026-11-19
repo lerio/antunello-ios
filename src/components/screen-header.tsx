@@ -83,10 +83,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 24,                 // web text-2xl
+    lineHeight: 32,
     fontWeight: '700',
-    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 12,

@@ -3,12 +3,13 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { cardStyle } from '@/components/card';
 import { CategoryGlyph } from '@/components/category-icon';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, Layout, Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { useBudgets, type BudgetWithProgress } from '@/features/budgets/use-budgets';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -108,7 +109,7 @@ function BudgetCard({
       accessibilityRole="button"
       accessibilityLabel={`Edit the ${budget.category} budget`}
       style={({ pressed }) => [
-        styles.card,
+        cardStyle,
         { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.7 : 1 },
       ]}>
       <View style={styles.cardHead}>
@@ -166,23 +167,13 @@ function ProgressBar({
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Layout.gutter,
+    paddingTop: Layout.pageTop,
     paddingBottom: Spacing.five + BottomTabInset,
-    gap: Spacing.two,
+    gap: Layout.stackGap,
   },
   loading: {
     marginTop: Spacing.five,
-  },
-  card: {
-    padding: Spacing.four,          // 16px = p-4 on mobile
-    borderRadius: Radius.large + 4, // rounded-2xl = 20px (large=16 + 4)
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.two,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   cardHead: {
     flexDirection: 'row',
@@ -201,6 +192,8 @@ const styles = StyleSheet.create({
   },
   limit: {
     fontSize: 30,    // text-3xl
+    // Explicit: ThemedText's default lineHeight is 24 and clips the glyphs.
+    lineHeight: 36,
     fontWeight: '600', // font-semibold
     fontVariant: ['tabular-nums'],
   },
@@ -231,7 +224,6 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
-    marginTop: Spacing.two,
   },
   addLabel: {
     fontSize: 16,

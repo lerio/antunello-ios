@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Bar, CartesianChart } from 'victory-native';
 
+import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -52,7 +53,7 @@ export function CategoryChart({
   );
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card }]}>
+    <Card>
       <View style={styles.header}>
         <View style={styles.totals}>
           <PrivacyValue style={styles.total}>{formatCurrency(totalAmount, 'EUR')}</PrivacyValue>
@@ -119,7 +120,7 @@ export function CategoryChart({
           </CartesianChart>
         )}
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -152,11 +153,6 @@ function formatAxisDate(isoDate: string | undefined, timeRange: TimeRange): stri
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.medium,
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

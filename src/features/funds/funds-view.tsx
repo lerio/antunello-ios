@@ -3,10 +3,11 @@ import { useMemo } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, Layout, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { groupFunds, type FundGroup } from '@/features/funds/group-funds';
 import { useFundBalances, type FundWithBalance } from '@/features/funds/use-fund-balances';
@@ -84,19 +85,13 @@ export function FundsView() {
 
 /** Every fund's balance converted to EUR and summed. */
 function TotalCard({ totalEUR }: { totalEUR: number }) {
-  const theme = useTheme();
-
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.card, borderColor: theme.separator },
-      ]}>
+    <Card>
       <ThemedText themeColor="textSecondary" style={styles.sectionLabel}>
         TOTAL
       </ThemedText>
       <PrivacyValue style={styles.total}>{formatCurrency(totalEUR, 'EUR')}</PrivacyValue>
-    </View>
+    </Card>
   );
 }
 
@@ -105,11 +100,7 @@ function GroupCard({ group }: { group: FundGroup }) {
   const theme = useTheme();
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.card, borderColor: theme.separator },
-      ]}>
+    <Card>
       <View style={styles.groupHead}>
         <ThemedText style={styles.groupName} numberOfLines={1}>
           {group.name}
@@ -129,7 +120,7 @@ function GroupCard({ group }: { group: FundGroup }) {
           divider={index > 0 ? theme.separator : undefined}
         />
       ))}
-    </View>
+    </Card>
   );
 }
 
@@ -174,9 +165,9 @@ function FundRow({ fund, divider }: { fund: FundWithBalance; divider?: string })
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    gap: Spacing.three,
+    paddingHorizontal: Layout.gutter,
+    paddingTop: Layout.pageTop,
+    gap: Layout.stackGap,
   },
   loading: {
     marginTop: Spacing.five,
@@ -184,12 +175,6 @@ const styles = StyleSheet.create({
   empty: {
     justifyContent: 'flex-start',
     paddingTop: Spacing.six,
-  },
-  card: {
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.three,
-    gap: Spacing.two,
   },
   sectionLabel: {
     fontSize: 12,

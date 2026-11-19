@@ -131,3 +131,36 @@ export const Radius = {
  */
 export const BottomTabInset = Platform.select({ ios: 50, default: 80 }) ?? 0;
 
+
+/**
+ * Layout values shared with the web app's mobile layout. Every screen and card
+ * takes its gutter, gap and card padding from here, so a spacing change is one
+ * edit — the web equivalent is `PageContainer`/`PageStack`/`Card`.
+ *
+ * Note that `Spacing.four` is 24, not the 16 of web's `p-4`; use these instead.
+ */
+export const Layout = {
+  /** Web `px-4`: the page's left and right gutter. */
+  gutter: 16,
+  /** Web `pt-4`: space between the header band and the first element. */
+  pageTop: 16,
+  /** Web `gap-4`: space between sibling cards. */
+  stackGap: 16,
+  /** Web `p-4`: inside a card. */
+  cardPadding: 16,
+  /** Web `rounded-2xl` is 1rem = 16px. */
+  cardRadius: 16,
+  /** Gap between the stacked blocks inside a card. */
+  cardGap: 8,
+  /** Web `h-8 w-8`: an icon button in a card's title row. */
+  iconButton: 32,
+} as const;
+
+/** Web `shadow-sm`. */
+export const CardShadow = {
+  shadowColor: '#000000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 2,
+  elevation: 1,
+} as const;

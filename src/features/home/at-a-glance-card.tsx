@@ -1,10 +1,10 @@
-import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { Card, CardToggle } from '@/components/card';
 import { CategoryGlyph } from '@/components/category-icon';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import {
   culpritsOf,
@@ -79,15 +79,7 @@ export function AtAGlanceCard() {
       : null;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.separator,
-          borderWidth: StyleSheet.hairlineWidth,
-        },
-      ]}>
+    <Card>
       <View style={styles.headerRow}>
         <ThemedText
           accessibilityRole="header"
@@ -95,19 +87,12 @@ export function AtAGlanceCard() {
           style={styles.sectionLabel}>
           Spent this month
         </ThemedText>
-        <Pressable
+        <CardToggle
+          open={detailOpen}
           onPress={() => setDetailOpen((open) => !open)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: detailOpen }}
-          accessibilityLabel={detailOpen ? 'Hide details' : 'Show details'}
-          style={styles.toggle}>
-          <SymbolView
-            name={detailOpen ? 'chevron.up' : 'chevron.down'}
-            size={13}
-            tintColor={theme.textSecondary}
-          />
-        </Pressable>
+          openLabel="Hide details"
+          closedLabel="Show details"
+        />
       </View>
 
       {error ? (
@@ -290,29 +275,15 @@ export function AtAGlanceCard() {
           ) : null}
         </>
       )}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.large,
-    padding: Spacing.four,        // 16px - matches web p-4 on mobile
-    gap: Spacing.two,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,                 // Android shadow, iOS uses shadow* props
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  toggle: {
-    padding: Spacing.two,
   },
   sectionLabel: {
     fontSize: 18,                 // matches web text-lg (18px)

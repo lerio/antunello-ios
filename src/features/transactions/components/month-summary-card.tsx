@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CategoryGlyph } from '@/components/category-icon';
+import { Card, CardToggle } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Layout, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
 import type { CategoryTotal, MonthSummary } from '@/features/transactions/month-summary';
@@ -55,24 +56,17 @@ export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps
   const { comparison } = summary;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
+    <Card style={styles.card}>
       <View style={styles.header}>
         <ThemedText themeColor="text" style={styles.sectionLabel} numberOfLines={1}>
           {periodTitle(year, month)}
         </ThemedText>
-        <Pressable
+        <CardToggle
+          open={expanded}
           onPress={() => setExpanded((value) => !value)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityState={{ expanded }}
-          accessibilityLabel={expanded ? 'Collapse summary' : 'Expand summary'}
-          style={styles.toggle}>
-          <SymbolView
-            name={expanded ? 'chevron.up' : 'chevron.down'}
-            size={13}
-            tintColor={theme.textSecondary}
-          />
-        </Pressable>
+          openLabel="Collapse summary"
+          closedLabel="Expand summary"
+        />
       </View>
 
       <View style={styles.heroRow}>
@@ -174,7 +168,7 @@ export function MonthSummaryCard({ summary, year, month }: MonthSummaryCardProps
           ) : null}
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -255,18 +249,9 @@ function CollapsibleTotal({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: Spacing.three,
-    marginTop: Spacing.three,
-    marginBottom: Spacing.three,
-    padding: Spacing.four,        // 24px - matches at-a-glance card (web p-4 on mobile)
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.two,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    marginHorizontal: Layout.gutter,
+    marginTop: Layout.pageTop,
+    marginBottom: Layout.stackGap,
   },
   header: {
     flexDirection: 'row',
@@ -278,9 +263,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-  },
-  toggle: {
-    padding: Spacing.two,
   },
   breakdown: {
     gap: 2,

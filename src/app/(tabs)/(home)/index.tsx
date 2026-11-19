@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
-import { BottomTabInset, Spacing } from '@/constants/theme';
+import { BottomTabInset, Layout, Spacing } from '@/constants/theme';
 import { AtAGlanceCard } from '@/features/home/at-a-glance-card';
 import { NetWorthCard } from '@/features/home/net-worth-card';
 import { TX, qk } from '@/lib/query-keys';
@@ -57,8 +57,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    gap: Spacing.three,
+    paddingHorizontal: Layout.gutter,
+    paddingTop: Layout.pageTop,
+    gap: Layout.stackGap,
   },
 });

@@ -81,6 +81,7 @@ export const FEATURE_MAP = [
   { web: 'components/layout/privacy-toggle.tsx', status: 'ported', ios: ['src/app/(tabs)/settings.tsx'], note: 'A switch in Settings, with a preview.' },
   { web: 'components/layout/header-brand.tsx', status: 'ported', ios: ['src/components/screen-header.tsx'], note: 'Page titles live in the iOS header; the web logo gives way to them on narrow screens.' },
   { web: 'components/layout/user-menu.tsx', status: 'ported', ios: ['src/app/(tabs)/settings.tsx'], note: 'Account, change password and sign out live in Settings.' },
+  { web: 'components/layout/page-container.tsx', status: 'ported', ios: ['src/constants/theme.ts', 'src/components/card.tsx'], note: 'Page gutter, stack gap and card values live in `Layout`; `Card`/`CardToggle` are the shared surface.' },
   { web: 'components/layout/header-auth.tsx', status: 'deliberate', note: 'The web header and its hard-coded display names; iOS shows the signed-in email in Settings.' },
   { web: 'components/layout/hero.tsx', status: 'deliberate', note: 'Landing page only.' },
   { web: 'components/layout/env-var-warning.tsx', status: 'deliberate', note: 'Template artifact. iOS fails fast on missing config (lib/supabase.ts).' },

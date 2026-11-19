@@ -3,8 +3,9 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-na
 
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { Card, cardStyle } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Layout, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -46,23 +47,22 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <BankIntegrations />
 
-        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
-          ACCOUNT
+        <ThemedText style={styles.sectionLabel}>
+          Account
         </ThemedText>
 
-        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
+        <Card>
           <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
             Signed in as
           </ThemedText>
           <ThemedText selectable>{session?.user.email ?? 'Unknown'}</ThemedText>
-        </View>
+        </Card>
 
         <Pressable
           onPress={() => router.push('/change-password')}
           accessibilityRole="button"
           style={({ pressed }) => [
-            styles.card,
-            styles.spaced,
+            cardStyle,
             { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
           ]}>
           <ThemedText>Change password</ThemedText>
@@ -72,18 +72,17 @@ export default function SettingsScreen() {
           onPress={confirmSignOut}
           accessibilityRole="button"
           style={({ pressed }) => [
-            styles.card,
-            styles.spaced,
+            cardStyle,
             { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
           ]}>
           <ThemedText themeColor="destructive">Sign out</ThemedText>
         </Pressable>
 
-        <ThemedText themeColor="textSecondary" style={[styles.sectionLabel, styles.spaced]}>
-          PRIVACY
+        <ThemedText style={styles.sectionLabel}>
+          Privacy
         </ThemedText>
 
-        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
+        <Card>
           <View style={styles.switchRow}>
             <View style={styles.switchLabel}>
               <ThemedText>Hide amounts</ThemedText>
@@ -124,16 +123,16 @@ export default function SettingsScreen() {
               </PrivacyValue>
             </View>
           </View>
-        </View>
+        </Card>
 
-        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
+        <Card>
           <ThemedText themeColor="textSecondary" style={styles.rowLabel}>
             Supabase project
           </ThemedText>
           <ThemedText selectable style={styles.mono}>
             {(process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace('https://', '')}
           </ThemedText>
-        </View>
+        </Card>
       </ScrollView>
     </Screen>
   );
@@ -141,25 +140,15 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    padding: Spacing.three,
-    gap: Spacing.two,
+    padding: Layout.gutter,
+    paddingTop: Layout.pageTop,
+    gap: Layout.stackGap,
   },
   sectionLabel: {
     fontSize: 18,
     fontWeight: '600',
-    marginTop: Spacing.three,
-    marginBottom: Spacing.one,
-  },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.one,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    // Pull the card up to the label: the stack gap is for sibling cards.
+    marginBottom: -(Layout.stackGap - Layout.cardGap),
   },
   rowLabel: {
     fontSize: 13,
@@ -195,8 +184,5 @@ const styles = StyleSheet.create({
   mono: {
     fontSize: 13,
     fontFamily: 'ui-monospace',
-  },
-  spaced: {
-    marginTop: Spacing.three,
   },
 });

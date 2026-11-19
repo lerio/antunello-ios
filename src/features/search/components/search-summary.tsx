@@ -1,8 +1,9 @@
 import { EyeOff } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
+import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Layout, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import type { Transaction } from '@/domain/types';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -27,7 +28,7 @@ export function SearchSummary({ transactions }: { transactions: readonly Transac
   const showHidden = hasHiddenTotals(totals);
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.separator }]}>
+    <Card style={styles.card}>
       <View style={styles.balanceRow}>
         <ThemedText themeColor="textSecondary" style={styles.label}>
           Balance
@@ -66,7 +67,7 @@ export function SearchSummary({ transactions }: { transactions: readonly Transac
           </ThemedText>
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -83,13 +84,9 @@ function SummaryRow({ label, amount, color }: { label: string; amount: number; c
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: Spacing.three,
-    marginTop: Spacing.two,
-    marginBottom: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.two,
+    marginHorizontal: Layout.gutter,
+    marginTop: Layout.pageTop,
+    marginBottom: Layout.stackGap,
   },
   balanceRow: {
     flexDirection: 'row',
