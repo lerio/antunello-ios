@@ -43,9 +43,9 @@ export const FEATURE_MAP = [
   { web: 'app/protected/budgets/page.tsx', status: 'ported', ios: ['src/features/budgets/budgets-view.tsx', 'src/app/(tabs)/budgets.tsx'] },
   { web: 'app/protected/budgets/add/page.tsx', status: 'ported', ios: ['src/app/budget/new.tsx'] },
   { web: 'app/protected/budgets/edit/[id]/page.tsx', status: 'ported', ios: ['src/app/budget/[id].tsx'] },
-  { web: 'app/protected/settings/page.tsx', status: 'ported', ios: ['src/app/(tabs)/settings.tsx', 'src/features/settings/components/bank-integrations.tsx'], note: 'Bank connect, re-authenticate and disconnect open the web app in a browser.' },
+  { web: 'app/protected/settings/page.tsx', status: 'ported', ios: ['src/app/(tabs)/settings.tsx', 'src/features/settings/components/bank-integrations.tsx'], note: 'Integrations, Funds and Categories tabs. Bank connect, re-authenticate and disconnect open the web app in a browser.' },
   { web: 'app/protected/reset-password/page.tsx', status: 'ported', ios: ['src/app/change-password.tsx', 'src/features/auth/change-password-form.tsx'] },
-  { web: 'app/protected/admin/page.tsx', status: 'deliberate', note: 'Admin tools (fund-category CRUD, CSV import, exchange-rate retry, delete-all) are not offered on mobile, by decision.' },
+  { web: 'app/protected/admin/page.tsx', status: 'deliberate', note: 'Admin tools (CSV import, exchange-rate retry, delete-all) are not offered on mobile, by decision. Fund-category CRUD moved to the Settings Funds tab, which is ported.' },
 
   // --- API routes --------------------------------------------------------
   { web: 'app/api/cron/sync/route.ts', status: 'ported', ios: ['src/features/settings/mutations.ts'], note: 'Called per account by "Fetch now".' },
@@ -72,7 +72,8 @@ export const FEATURE_MAP = [
   { web: 'components/features/transaction-form-html-design.tsx', status: 'deliberate', note: 'The web modal and standalone add/edit pages are one sheet here (PARITY.md, "Screens merged").' },
   { web: 'components/features/transaction-summary.tsx', status: 'ported', ios: ['src/features/transactions/components/month-summary-card.tsx', 'src/features/year/year-view.tsx'] },
   { web: 'components/features/transactions-table-optimized.tsx', status: 'ported', ios: ['src/features/transactions/components/transaction-row.tsx', 'src/features/transactions/components/day-header.tsx'] },
-  { web: 'components/features/fund-categories-manager.tsx', status: 'deliberate', note: 'Part of the admin tools, which are not offered on mobile.' },
+  { web: 'components/features/fund-categories-manager.tsx', status: 'ported', ios: ['src/features/settings/components/funds-manager.tsx', 'src/features/settings/use-fund-categories.ts'], note: 'The Settings Funds tab. Written directly, RLS-scoped.' },
+  { web: 'components/features/categories-manager.tsx', status: 'ported', ios: ['src/features/settings/components/categories-manager.tsx', 'src/features/settings/category-sections.ts', 'src/features/settings/use-category-counts.ts'], note: 'The Settings Categories tab. Add/edit/delete are placeholders on both clients until the transaction migration is designed.' },
 
   // --- Layout components -------------------------------------------------
   { web: 'components/layout/navigation.tsx', status: 'ported', ios: ['src/app/(tabs)/_layout.tsx'] },

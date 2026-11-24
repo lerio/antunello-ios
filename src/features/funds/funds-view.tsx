@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Layout, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
@@ -49,7 +50,8 @@ export function FundsView() {
   );
 
   return (
-    <Screen insetTop={false}>
+    <Screen>
+      <ScreenHeader title="Funds" back />
       <ScrollView
         contentContainerStyle={[
           styles.content,

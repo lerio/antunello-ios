@@ -189,9 +189,9 @@ These are intentional and are not drift.
 ### Screens not ported
 
 The web app's `/protected/admin` page is absent, **by decision**: no CSV import, no
-fund-category CRUD, no data management, no exchange-rate retry, no delete-all. They
+data management, no exchange-rate retry, no delete-all. They
 are not planned for mobile. They are desktop-shaped, rarely used, and one-off setup
-tasks, and delete-all in particular is not something to put a thumb away from.
+tasks, and delete-all in particular is not something to put a thumb away from. Fund-category CRUD used to be on that page; it moved to the Settings Funds tab and is ported.
 
 The web app's `/` landing page is absent too: this app opens to sign-in or Home.
 
@@ -350,7 +350,7 @@ screen opens, which is soon enough for data that arrives on a cron.
 
 ### Bank connections
 
-Fund mappings and a sync are all available in the app. Bulk fetch has no toggle: it runs for every connected account with a fund linked.
+Fund mappings and a sync are all available in the app, as are the Funds and Categories tabs (fund CRUD; category list with counts, whose add/edit/delete are placeholders as on web). Bulk fetch has no toggle: it runs for every connected account with a fund linked.
 Connecting, re-authenticating and disconnecting are not — those open the browser.
 That is not a shortcut: the Enable Banking flow signs a JWT with a private key
 that must never ship on a device, and Trade Republic's needs a phone number, a

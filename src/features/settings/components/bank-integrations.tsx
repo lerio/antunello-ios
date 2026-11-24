@@ -44,16 +44,6 @@ export function BankIntegrations() {
 
   return (
     <>
-      {/* The settings menu: plain text tabs, like the Month/Year selector. */}
-      <View style={styles.tabs} accessibilityRole="tablist">
-        <ThemedText
-          accessibilityRole="tab"
-          accessibilityState={{ selected: true }}
-          style={styles.tab}>
-          Banks
-        </ThemedText>
-      </View>
-
       {isLoading ? <ActivityIndicator /> : null}
 
       {isError ? (
@@ -176,18 +166,6 @@ function StatusPill({
 }
 
 const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    // Pull the first card up to the tabs: the stack gap is for sibling cards.
-    marginBottom: -(Layout.stackGap - Layout.cardGap),
-  },
-  tab: {
-    fontSize: 18,
-    lineHeight: 28,
-    fontWeight: '600',
-  },
   row: {
     gap: Layout.stackGap,
   },

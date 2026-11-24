@@ -74,6 +74,12 @@ export const qk = {
    */
   fundBalances: () => ['fund-balances'] as const,
 
+  /** Every fund account, inactive ones included, for Settings → Funds. */
+  allFunds: () => ['funds', 'all'] as const,
+
+  /** Transaction counts per category and subcategory, for Settings → Categories. */
+  categoryCounts: () => ['category-counts'] as const,
+
   /** Budget targets with spending progress. */
   budgets: () => ['budgets'] as const,
 

@@ -1,4 +1,5 @@
-import { Eye, EyeOff } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +11,8 @@ import { useTheme } from '@/hooks/use-theme';
 type ScreenHeaderProps = {
   title: string;
   subtitle?: string;
+  /** Show a back chevron beside the title, for a screen pushed from a parent. */
+  back?: boolean;
 };
 
 /**
@@ -19,8 +22,9 @@ type ScreenHeaderProps = {
  * than the two-card Home screen can spare. This keeps the title, an optional
  * one-line subtitle, and the hide-balances toggle in a single ~60pt band.
  */
-export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, back }: ScreenHeaderProps) {
   const theme = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { enabled, toggle } = usePrivacy();
 
@@ -37,6 +41,17 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
           paddingTop: insets.top + Spacing.one,
         },
       ]}>
+      {back ? (
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={styles.back}>
+          <ChevronLeft size={28} color={theme.text} strokeWidth={2} />
+        </Pressable>
+      ) : null}
+
       <View style={styles.text}>
         <ThemedText
           accessibilityRole="header"
@@ -78,6 +93,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.two + 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  back: {
+    width: 34,
+    height: 34,
+    marginLeft: -Spacing.two,   // pull the chevron's visual edge to the gutter
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     flex: 1,

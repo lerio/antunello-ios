@@ -141,7 +141,7 @@ export function AccountControls({
 }
 
 /** A labelled select: small label above, the value and a chevron in the field. */
-function FieldRow({
+export function FieldRow({
   label,
   value,
   onPress,

@@ -329,9 +329,10 @@ file.
 
 ## What is deliberately absent
 
-The web app's `/protected/admin` page — CSV import, fund-category CRUD, data
-management, exchange-rate retry, delete-all — is not ported, by decision. It is not
-planned for mobile.
+The web app's `/protected/admin` page — CSV import, data management,
+exchange-rate retry, delete-all — is not ported, by decision. It is not planned for
+mobile. (Fund-category CRUD used to live there; it is now the Settings Funds tab,
+which is ported.)
 
 Bank connection is handled by opening the deployed web app's settings page in an
 in-app browser, rather than reimplementing OAuth and phone/2FA flows that depend
