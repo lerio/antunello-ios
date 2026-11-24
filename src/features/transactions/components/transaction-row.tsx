@@ -112,18 +112,6 @@ export const TransactionRow = memo(function TransactionRow({
               onPress={onSubCategoryPress}
             />
           )}
-
-          {isSplitInstance || transaction.split_remaining_count ? (
-            <View
-              style={[styles.splitChip, { backgroundColor: theme.backgroundSelected }]}>
-              <GitFork size={12} color={theme.textSecondary} strokeWidth={2} />
-              <ThemedText themeColor="textSecondary" style={styles.splitChipLabel}>
-                {transaction.split_remaining_count
-                  ? `Split · ${transaction.split_remaining_count} left`
-                  : 'Split'}
-              </ThemedText>
-            </View>
-          ) : null}
         </View>
       </View>
 
@@ -145,6 +133,20 @@ export const TransactionRow = memo(function TransactionRow({
             numberOfLines={1}>
             {formatCurrency(Math.abs(originalAmount), transaction.currency)}
           </PrivacyValue>
+        ) : null}
+
+        {isSplitInstance || transaction.split_remaining_count ? (
+          <View style={styles.splitChipSlot}>
+            <View
+              style={[styles.splitChip, { backgroundColor: theme.backgroundSelected }]}>
+              <GitFork size={12} color={theme.textSecondary} strokeWidth={2} />
+              <ThemedText themeColor="textSecondary" style={styles.splitChipLabel}>
+                {transaction.split_remaining_count
+                  ? `Split · ${transaction.split_remaining_count} left`
+                  : 'Split'}
+              </ThemedText>
+            </View>
+          </View>
         ) : null}
       </View>
     </Pressable>
@@ -313,6 +315,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  // Spans the amounts column and pushes the chip to its right edge, so the
+  // chip lines up with the amount's trailing edge whatever their widths.
+  splitChipSlot: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
   splitChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,6 +340,8 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   amount: {
+    alignSelf: 'stretch',
+    textAlign: 'right',
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '600',
