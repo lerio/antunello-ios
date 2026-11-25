@@ -1,22 +1,21 @@
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { Card, CardIconButton } from '@/components/card';
 import { CategoryGlyph } from '@/components/category-icon';
-import { OutlineButton } from '@/components/outline-button';
 import { ThemedText } from '@/components/themed-text';
 import { Layout, Spacing } from '@/constants/theme';
-import { categorySections, subcategoryKey } from '@/features/settings/category-sections';
+import { useCategories } from '@/features/categories/use-categories';
+import type { CategoryEntry } from '@/features/categories/registry';
+import {
+  categorySections,
+  categoryTransactionCount,
+  subcategoryTransactionCount,
+} from '@/features/settings/category-sections';
 import { useCategoryCounts } from '@/features/settings/use-category-counts';
 import { useTheme } from '@/hooks/use-theme';
-
-/**
- * Editing categories means migrating the transactions that use them, which is
- * not designed yet. Until it is, every action is a placeholder.
- */
-function notAvailable() {
-  Alert.alert('Not available yet', "Editing categories isn't available yet.");
-}
 
 /** A pill with a transaction count; nothing while the counts load. */
 function CountBadge({ count }: { count: number | undefined }) {
@@ -35,92 +34,117 @@ function CountBadge({ count }: { count: number | undefined }) {
 }
 
 /**
- * Settings → Categories: the categories grouped Income / Expense / Movement,
- * each with its subcategories and a transaction count, and the add / edit /
- * delete controls. The controls are UI only for now, as on web.
+ * Settings → Categories: the categories under Income / Expenses / Movements tabs,
+ * each with its subcategories (built-in and custom) and a transaction count.
+ * The pencils open an edit sheet; adding is the floating + on the Settings
+ * screen and "Add subcategory". Renaming and deleting are placeholders for now,
+ * as on web.
  */
 export function CategoriesManager() {
   const theme = useTheme();
+  const router = useRouter();
   const { data: counts } = useCategoryCounts();
+  // Re-renders when custom categories load; `categorySections` reads them.
+  const { categories } = useCategories();
+  const sections = categorySections();
+  const [sectionTitle, setSectionTitle] = useState(sections[0].title);
+  const section = sections.find((candidate) => candidate.title === sectionTitle) ?? sections[0];
+
+  const openEdit = (cat: CategoryEntry, sub?: string) =>
+    router.push({
+      pathname: '/category/edit',
+      params: { category: cat.category, type: cat.type, ...(sub ? { sub } : {}) },
+    });
 
   return (
     <>
-      {categorySections().map((section) => (
-        <View key={section.title} style={styles.section}>
-          <ThemedText themeColor="textSecondary" accessibilityRole="header" style={styles.sectionTitle}>
-            {section.title}
-          </ThemedText>
+      <View style={styles.tabs} accessibilityRole="tablist">
+        {sections.map((option) => {
+          const selected = option.title === section.title;
+          return (
+            <Pressable
+              key={option.title}
+              onPress={() => setSectionTitle(option.title)}
+              hitSlop={8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}>
+              <ThemedText themeColor={selected ? 'text' : 'textSecondary'} style={styles.sectionTitle}>
+                {option.title}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
 
-          <View style={styles.cards}>
-            {section.categories.map((cat) => (
-              <Card key={cat.category}>
-                <View style={styles.head}>
+      <View style={styles.cards}>
+        {section.categories.map((cat) => (
+          <Card key={`${cat.type}/${cat.category}`}>
+            <View style={styles.head}>
+              <View style={styles.title}>
+                <CategoryGlyph category={cat.category} size={20} color={theme.textSecondary} />
+                <ThemedText style={styles.categoryName}>{cat.category}</ThemedText>
+                <CountBadge count={categoryTransactionCount(counts, categories, cat)} />
+              </View>
+              <CardIconButton
+                symbol="pencil"
+                label={`Edit ${cat.category}`}
+                onPress={() => openEdit(cat)}
+              />
+            </View>
+
+            <View>
+              {cat.subcategories.map((sub, index) => (
+                <View
+                  key={sub}
+                  style={[
+                    styles.subRow,
+                    index > 0 && {
+                      borderTopWidth: StyleSheet.hairlineWidth,
+                      borderTopColor: theme.separator,
+                    },
+                  ]}>
                   <View style={styles.title}>
-                    <CategoryGlyph category={cat.category} size={20} color={theme.textSecondary} />
-                    <ThemedText style={styles.categoryName}>{cat.category}</ThemedText>
-                    <CountBadge count={counts ? (counts.byCategory[cat.category] ?? 0) : undefined} />
+                    <ThemedText style={styles.subName}>{sub}</ThemedText>
+                    <CountBadge count={subcategoryTransactionCount(counts, categories, cat, sub)} />
                   </View>
-                  <View style={styles.actions}>
-                    <CardIconButton symbol="pencil" label={`Edit ${cat.category}`} onPress={notAvailable} />
-                    <CardIconButton symbol="trash" label={`Delete ${cat.category}`} onPress={notAvailable} />
-                  </View>
+                  <CardIconButton
+                    symbol="pencil"
+                    label={`Edit ${sub}`}
+                    onPress={() => openEdit(cat, sub)}
+                  />
                 </View>
+              ))}
+            </View>
 
-                <View>
-                  {cat.subcategories.map((sub, index) => (
-                    <View
-                      key={sub}
-                      style={[
-                        styles.subRow,
-                        index > 0 && {
-                          borderTopWidth: StyleSheet.hairlineWidth,
-                          borderTopColor: theme.separator,
-                        },
-                      ]}>
-                      <View style={styles.title}>
-                        <ThemedText style={styles.subName}>{sub}</ThemedText>
-                        <CountBadge
-                          count={
-                            counts
-                              ? (counts.bySubcategory[subcategoryKey(cat.category, sub)] ?? 0)
-                              : undefined
-                          }
-                        />
-                      </View>
-                      <View style={styles.actions}>
-                        <CardIconButton symbol="pencil" label={`Edit ${sub}`} onPress={notAvailable} />
-                        <CardIconButton symbol="trash" label={`Delete ${sub}`} onPress={notAvailable} />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                <Pressable
-                  onPress={notAvailable}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Add subcategory to ${cat.category}`}
-                  hitSlop={6}
-                  style={({ pressed }) => [styles.addSub, { opacity: pressed ? 0.6 : 1 }]}>
-                  <SymbolView name="plus" size={13} tintColor={theme.textSecondary} />
-                  <ThemedText themeColor="textSecondary" style={styles.addSubLabel}>
-                    Add subcategory
-                  </ThemedText>
-                </Pressable>
-              </Card>
-            ))}
-          </View>
-        </View>
-      ))}
-
-      <OutlineButton label="Add New Category" onPress={notAvailable} />
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/category/new',
+                  params: { parent: cat.category, type: cat.type },
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Add subcategory to ${cat.category}`}
+              hitSlop={6}
+              style={({ pressed }) => [styles.addSub, { opacity: pressed ? 0.6 : 1 }]}>
+              <SymbolView name="plus" size={13} tintColor={theme.textSecondary} />
+              <ThemedText themeColor="textSecondary" style={styles.addSubLabel}>
+                Add subcategory
+              </ThemedText>
+            </Pressable>
+          </Card>
+        ))}
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    // Web `gap-3` between a section's heading and its cards.
-    gap: 12,
+  // The section tabs: Income / Expenses / Movements, in the heading style.
+  tabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   sectionTitle: {
     fontSize: 16,
@@ -142,11 +166,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.two,
   },
   categoryName: {

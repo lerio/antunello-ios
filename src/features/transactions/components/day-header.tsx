@@ -40,17 +40,12 @@ export const DayHeader = memo(function DayHeader({ day, showYear = false }: DayH
       : day.dailyTotal > 0
         ? theme.income
         : theme.expense;
-  // Matches web: text-gray-600 / dark:text-gray-400 (darker than muted)
-  const dateLabelColor = theme.text;
 
   return (
     <View
-      style={[
-        styles.dayHeader,
-        { backgroundColor: theme.background, borderBottomColor: theme.separator },
-      ]}>
+      style={[styles.dayHeader, { backgroundColor: theme.background }]}>
       <View style={styles.side}>
-        <ThemedText themeColor="text" style={styles.dayLabel}>
+        <ThemedText style={[styles.dayLabel, { color: theme.dayLabel }]}>
           {showYear ? formatDateHeaderWithYear(day.isoDate) : formatDateHeader(day.isoDate)}
         </ThemedText>
         {day.hiddenCount > 0 ? (
@@ -94,7 +89,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two + Spacing.one,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   side: {
     flexDirection: 'row',

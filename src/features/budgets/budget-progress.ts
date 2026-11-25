@@ -8,7 +8,7 @@
  * number anyone re-derives by hand.
  */
 
-import { MAIN_CATEGORIES, getCategoryType } from '@/domain/types';
+import { allMainCategories, isCategoryOfType } from '@/features/categories/registry';
 import type { Budget, Transaction } from '@/domain/types';
 
 /** How a budget's progress reads at a glance. */
@@ -122,10 +122,10 @@ export function selectableBudgetCategories(
   existingCategories: readonly string[],
   currentCategory?: string,
 ): string[] {
-  return MAIN_CATEGORIES.filter(
+  return allMainCategories().filter(
     (category) =>
       category === currentCategory ||
-      (getCategoryType(category) === 'expense' &&
+      (isCategoryOfType(category, 'expense') &&
         category !== 'Money Transfer' &&
         !existingCategories.includes(category)),
   ).sort();

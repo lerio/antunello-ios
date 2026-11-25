@@ -33,7 +33,8 @@ import {
   type ValidationErrors,
 } from '@/domain/form-validation';
 import { generateTransferTitle } from '@/domain/money-transfer-validation';
-import { getCategoryType, type TitleSuggestion } from '@/domain/types';
+import type { TitleSuggestion } from '@/domain/types';
+import { isCategoryOfType } from '@/features/categories/registry';
 import { roundToMinuteInterval } from '@/features/transactions/form/minute-interval';
 
 /** The category that represents a movement between the user's own funds. */
@@ -159,7 +160,7 @@ function normalize(state: FormState): FormState {
   // A category must belong to the current type — switching from expense to
   // income while a category is selected clears it rather than leaving an
   // income transaction filed under an expense category.
-  if (next.mainCategory && getCategoryType(next.mainCategory) !== next.type) {
+  if (next.mainCategory && !isCategoryOfType(next.mainCategory, next.type)) {
     next = { ...next, mainCategory: '', subCategory: '' };
   }
 

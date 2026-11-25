@@ -132,7 +132,7 @@ export function ChipStrip({
                 // The current period is outlined only while a different chip is
                 // selected, where the fill does not already say which is which.
                 borderColor:
-                  item.isToday && !isSelected ? theme.textSecondary : 'transparent',
+                  item.isToday && !isSelected ? theme.todayRing : 'transparent',
               },
             ]}>
             <ThemedText style={[styles.label, { color: labelColor }]} numberOfLines={1}>
@@ -158,7 +158,8 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     height: CHIP_HEIGHT,
     borderRadius: Radius.small,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.two,

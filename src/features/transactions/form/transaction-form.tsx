@@ -17,13 +17,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PickerSheet, type PickerOption } from '@/components/picker-sheet';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { hasValidationErrors } from '@/domain/form-validation';
 import {
-  CATEGORIES_WITH_TYPES,
-  SUB_CATEGORIES,
   type FundCategory,
 } from '@/domain/types';
+import { useCategories } from '@/features/categories/use-categories';
 import { useFunds } from '@/features/funds/use-funds';
 import { DateField } from '@/features/transactions/form/date-field';
 import {
@@ -42,6 +41,7 @@ import {
   useUpdateTransaction,
   type TransactionInput,
 } from '@/features/transactions/mutations';
+import { useFormColors } from '@/hooks/use-form-colors';
 import { useTheme } from '@/hooks/use-theme';
 import { messageOf } from '@/lib/errors';
 import { hapticError, hapticSelect, hapticSuccess } from '@/lib/haptics';
@@ -91,6 +91,15 @@ type TransactionFormProps = {
    * full-height native modal, where the form must fill the page.
    */
   contentSized?: boolean;
+  /**
+   * Shows the form read-only, like the web modal does for a derived row (a split
+   * instance or a bonus): every control is inert and Save and Delete are gone.
+   */
+  disabled?: boolean;
+  /** Opens the transaction a derived row came from; shown as a link when set. */
+  onViewOriginal?: () => void;
+  /** Explains why the row cannot be edited, shown above the link. */
+  note?: string;
 };
 
 /**
@@ -113,8 +122,13 @@ export function TransactionForm({
   onSkip,
   skipLabel,
   contentSized,
+  disabled = false,
+  onViewOriginal,
+  note,
 }: TransactionFormProps) {
   const theme = useTheme();
+  const colors = useFormColors();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const [form, dispatch] = useReducer(formReducer, state);
   const [openPicker, setOpenPicker] = useState<OpenPicker>(null);
@@ -140,6 +154,7 @@ export function TransactionForm({
   const saving = useRef(false);
 
   const { data: funds = [] } = useFunds();
+  const { categories, subCategoriesFor } = useCategories();
   const { suggestions, shouldShow } = useTitleSuggestions(form.title);
 
   const addTransaction = useAddTransaction();
@@ -151,6 +166,7 @@ export function TransactionForm({
   // is a mutation this component can see.
   const [isExternalSaving, setExternalSaving] = useState(false);
   const isSaving = addTransaction.isPending || updateTransaction.isPending || isExternalSaving;
+  const isDeleting = deleteTransaction.isPending;
   const isTransfer = form.isMoneyTransferMode;
   const showErrors = form.hasAttemptedSubmit;
   const errorList = hasValidationErrors(form.errors);
@@ -192,38 +208,32 @@ export function TransactionForm({
     }
   }
 
-  function confirmDelete() {
+  function handleDelete() {
     if (!transactionId) return;
 
-    Alert.alert('Delete this transaction?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          deleteTransaction
-            .mutateAsync(transactionId)
-            .then(() => {
-              hapticSuccess();
-              onDone();
-            })
-            .catch((error) => {
-              hapticError();
-              Alert.alert('Could not delete', messageOf(error));
-            });
-        },
-      },
-    ]);
+    deleteTransaction
+      .mutateAsync(transactionId)
+      .then(() => {
+        hapticSuccess();
+        onDone();
+      })
+      .catch((error) => {
+        hapticError();
+        setShowDeleteConfirm(false);
+        Alert.alert('Could not delete', messageOf(error));
+      });
   }
 
-  const mainCategoryOptions: PickerOption[] = CATEGORIES_WITH_TYPES.filter(
+  const mainCategoryOptions: PickerOption[] = categories.filter(
     (category) =>
       category.type === form.type && category.category !== MONEY_TRANSFER_CATEGORY,
   ).map((category) => ({ value: category.category, label: category.category }));
 
-  const subCategoryOptions: PickerOption[] = (SUB_CATEGORIES[form.mainCategory] ?? []).map(
-    (sub) => ({ value: sub, label: sub }),
-  );
+  // A name can exist as both an income and an expense category; the type picks which.
+  const subCategoryOptions: PickerOption[] = subCategoriesFor(
+    form.mainCategory,
+    form.type,
+  ).map((sub) => ({ value: sub, label: sub }));
 
   const fundOptions: PickerOption[] = funds.map((fund: FundCategory) => ({
     value: fund.id,
@@ -243,7 +253,9 @@ export function TransactionForm({
   return (
     // No top inset: the sheet starts below the status bar, and the bank review
     // modal's native header supplies its own.
-    <Screen insetTop={false} style={contentSized ? styles.contentSized : undefined}>
+    <Screen
+      insetTop={false}
+      style={[{ backgroundColor: colors.sheet }, contentSized ? styles.contentSized : null]}>
       {onSkip ? (
         <Stack.Screen
           options={{
@@ -270,7 +282,7 @@ export function TransactionForm({
             {
               // The sheet already pads for the home indicator; the native
               // review modal does not.
-              paddingBottom: contentSized ? 0 : Math.max(insets.bottom, Spacing.three),
+              paddingBottom: contentSized ? Spacing.two : Math.max(insets.bottom, Spacing.three),
             },
           ]}
           // Lets iOS inset the scroll view by the keyboard's height, so the
@@ -283,50 +295,41 @@ export function TransactionForm({
           // Dragging down on the form dismisses the keyboard, which is the
           // expected gesture.
           keyboardDismissMode="interactive">
-          {showErrors && errorList ? (
-            <View
-              style={[styles.errorSummary, { backgroundColor: theme.card }]}
-              accessibilityRole="alert">
-              <ThemedText themeColor="destructive" style={styles.errorTitle}>
-                Missing required information
-              </ThemedText>
-              {Object.entries(form.errors)
-                .filter(([, message]) => message)
-                .map(([field, message]) => (
-                  <ThemedText key={field} themeColor="destructive" style={styles.errorItem}>
-                    • {message}
-                  </ThemedText>
-                ))}
-            </View>
-          ) : null}
-
           <View style={styles.amountRow}>
             <View
               style={[
                 styles.amountField,
-                { backgroundColor: theme.card, borderColor: theme.separator },
+                styles.fieldShadow,
+                { backgroundColor: colors.field, borderColor: colors.fieldBorder },
+                disabled && styles.disabled,
               ]}>
-              <ThemedText style={styles.currencySymbol}>{currencySymbol}</ThemedText>
+              <ThemedText style={[styles.currencySymbol, { color: colors.icon }]}>
+                {currencySymbol}
+              </ThemedText>
               <TextInput
                 value={form.amount}
                 onChangeText={(value) => dispatch({ kind: 'setAmount', value })}
                 onBlur={() => dispatch({ kind: 'blurAmount' })}
-                placeholder="0.00"
+                placeholder="Amount"
                 placeholderTextColor={theme.textSecondary}
+                editable={!disabled}
                 // Not `type=number`: it rejects a comma on some keyboards, and the
                 // reducer normalises commas anyway.
                 keyboardType="decimal-pad"
-                style={[styles.amountInput, { color: theme.text }]}
+                style={[styles.amountInput, { color: colors.fieldText }]}
                 accessibilityLabel="Amount"
               />
               <Pressable
                 onPress={() => setOpenPicker('currency')}
+                disabled={disabled}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel={`Currency: ${form.currency}`}
                 style={styles.currencyButton}>
-                <ThemedText style={{ color: theme.tint }}>{form.currency}</ThemedText>
-                <SymbolView name="chevron.up.chevron.down" size={11} tintColor={theme.tint} />
+                <ThemedText style={[styles.fieldText, { color: colors.icon }]}>
+                  {form.currency}
+                </ThemedText>
+                <SymbolView name="chevron.down" size={12} tintColor={colors.chevron} />
               </Pressable>
             </View>
 
@@ -334,7 +337,7 @@ export function TransactionForm({
               symbol="eye.slash"
               label="Hide from totals"
               checked={!isTransfer && form.hideFromTotals}
-              disabled={isTransfer}
+              disabled={disabled || isTransfer}
               hint={
                 isTransfer
                   ? 'Money transfers are excluded from totals automatically'
@@ -346,6 +349,7 @@ export function TransactionForm({
               symbol="arrow.triangle.branch"
               label="Split across year"
               checked={form.splitAcrossYear}
+              disabled={disabled}
               onChange={(value) => dispatch({ kind: 'setSplitAcrossYear', value })}
             />
           </View>
@@ -356,68 +360,54 @@ export function TransactionForm({
             </ThemedText>
           ) : null}
 
-          <TypeSelector form={form} dispatch={dispatch} />
+          <TypeSelector form={form} dispatch={dispatch} disabled={disabled} />
 
-          {isTransfer ? (
-            <>
-              <FieldRow
-                label="From fund"
-                value={form.sourceFund?.name ?? 'Select'}
-                empty={!form.sourceFund}
-                error={showErrors ? form.errors.mainCategory : ''}
-                onPress={() => setOpenPicker('sourceFund')}
-              />
-              <FieldRow
-                label="To fund"
-                value={form.targetFund?.name ?? 'Select'}
-                empty={!form.targetFund}
-                error={showErrors ? form.errors.subCategory : ''}
-                onPress={() => setOpenPicker('targetFund')}
-              />
-              {form.sourceFund && form.targetFund ? (
-                <TransferWarning
-                  sourceCurrency={funds.find((f) => f.id === form.sourceFund?.id)?.currency}
-                  targetCurrency={funds.find((f) => f.id === form.targetFund?.id)?.currency}
-                />
-              ) : null}
-            </>
-          ) : (
+          {isTransfer ? null : (
             <FieldRow
-              label="Select fund"
-              value={form.sourceFund?.name ?? 'Select'}
-              empty={!form.sourceFund}
+              placeholder="Select fund"
+              value={form.sourceFund?.name}
+              disabled={disabled}
               onPress={() => setOpenPicker('fund')}
             />
           )}
 
-          <View>
-            <TextInput
-              value={form.title}
-              onChangeText={(value) => {
-                setSuggestionsDismissed(false);
-                dispatch({ kind: 'setTitle', value });
-              }}
-              placeholder="Title"
-              placeholderTextColor={theme.textSecondary}
-              style={[
-                styles.titleInput,
-                {
-                  color: theme.text,
-                  backgroundColor: theme.card,
-                  borderColor: theme.separator,
-                },
-              ]}
-              accessibilityLabel="Title"
-            />
-            {showErrors && form.errors.title ? (
-              <ThemedText themeColor="destructive" style={styles.fieldError}>
-                {form.errors.title}
-              </ThemedText>
-            ) : null}
-          </View>
+          {isTransfer ? null : (
+            <View>
+              <TextInput
+                value={form.title}
+                onChangeText={(value) => {
+                  setSuggestionsDismissed(false);
+                  dispatch({ kind: 'setTitle', value });
+                }}
+                placeholder="Enter transaction title..."
+                placeholderTextColor={theme.textSecondary}
+                editable={!disabled}
+                style={[
+                  styles.titleInput,
+                  styles.fieldShadow,
+                  {
+                    color: colors.fieldText,
+                    backgroundColor: colors.field,
+                    borderColor: colors.fieldBorder,
+                  },
+                  disabled && styles.disabled,
+                ]}
+                accessibilityLabel="Title"
+              />
+              {showErrors && form.errors.title ? (
+                <ThemedText themeColor="destructive" style={styles.fieldError}>
+                  {form.errors.title}
+                </ThemedText>
+              ) : null}
+            </View>
+          )}
 
-          {shouldShow && !suggestionsDismissed && suggestions.length > 0 ? (
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
+          {!isTransfer && shouldShow && !suggestionsDismissed && suggestions.length > 0 ? (
+            <View
+              style={[
+                styles.suggestions,
+                { backgroundColor: colors.field, borderColor: colors.fieldBorder },
+              ]}>
               {suggestions.map((suggestion, index) => (
                 <View key={suggestion.id}>
                   {index > 0 ? (
@@ -433,7 +423,9 @@ export function TransactionForm({
                       styles.suggestion,
                       { backgroundColor: pressed ? theme.backgroundElement : 'transparent' },
                     ]}>
-                    <ThemedText numberOfLines={1}>{suggestion.title}</ThemedText>
+                    <ThemedText style={{ color: colors.fieldText }} numberOfLines={1}>
+                      {suggestion.title}
+                    </ThemedText>
                     <ThemedText
                       themeColor="textSecondary"
                       style={styles.suggestionMeta}
@@ -447,79 +439,140 @@ export function TransactionForm({
             </View>
           ) : null}
 
-          {!isTransfer ? (
+          {isTransfer ? (
             <>
               <FieldRow
-                label="Category"
-                value={form.mainCategory || 'Select'}
-                empty={!form.mainCategory}
+                placeholder="Select source fund"
+                value={form.sourceFund?.name}
+                error={showErrors ? form.errors.mainCategory : ''}
+                disabled={disabled}
+                onPress={() => setOpenPicker('sourceFund')}
+              />
+              <FieldRow
+                placeholder="Select target fund"
+                value={form.targetFund?.name}
+                error={showErrors ? form.errors.subCategory : ''}
+                disabled={disabled}
+                onPress={() => setOpenPicker('targetFund')}
+              />
+              {form.sourceFund && form.targetFund ? (
+                <TransferWarning
+                  sourceCurrency={funds.find((f) => f.id === form.sourceFund?.id)?.currency}
+                  targetCurrency={funds.find((f) => f.id === form.targetFund?.id)?.currency}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <FieldRow
+                placeholder="Category"
+                value={form.mainCategory || undefined}
                 marked={form.autoFilled.mainCategory}
                 error={showErrors ? form.errors.mainCategory : ''}
+                disabled={disabled}
                 onPress={() => setOpenPicker('mainCategory')}
               />
               <FieldRow
-                label="Sub Category"
-                value={form.subCategory || 'Select'}
-                empty={!form.subCategory}
+                placeholder="Sub Category"
+                value={form.subCategory || undefined}
                 marked={form.autoFilled.subCategory}
                 error={showErrors ? form.errors.subCategory : ''}
-                disabled={!form.mainCategory}
+                disabled={disabled || !form.mainCategory}
                 onPress={() => setOpenPicker('subCategory')}
               />
             </>
+          )}
+
+          <DateField
+            value={form.date}
+            disabled={disabled}
+            onChange={(value) => dispatch({ kind: 'setDate', value })}
+          />
+
+          {showErrors && errorList ? (
+            <View
+              style={[
+                styles.errorSummary,
+                { backgroundColor: colors.errorBg, borderColor: colors.errorBorder },
+              ]}
+              accessibilityRole="alert">
+              <View style={styles.errorHeader}>
+                <SymbolView name="exclamationmark.circle" size={16} tintColor={colors.errorTitle} />
+                <ThemedText style={[styles.errorTitle, { color: colors.errorTitle }]}>
+                  Missing required information
+                </ThemedText>
+              </View>
+              {Object.entries(form.errors)
+                .filter(([, message]) => message)
+                .map(([field, message]) => (
+                  <ThemedText key={field} style={[styles.errorItem, { color: colors.errorText }]}>
+                    • {message}
+                  </ThemedText>
+                ))}
+            </View>
           ) : null}
 
-          <DateField value={form.date} onChange={(value) => dispatch({ kind: 'setDate', value })} />
+          {showDeleteConfirm ? (
+            <View style={styles.actions}>
+              <ActionButton
+                label="Cancel"
+                kind="cancel"
+                disabled={isDeleting}
+                onPress={() => setShowDeleteConfirm(false)}
+              />
+              <ActionButton
+                label="Confirm"
+                kind="danger"
+                busy={isDeleting}
+                onPress={handleDelete}
+              />
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              {/* Add and edit get a Cancel here; a bank review uses the header's
+                  Skip instead, so its Accept button stays full width. */}
+              {onSkip ? null : (
+                <ActionButton
+                  label="Cancel"
+                  kind="cancel"
+                  disabled={isSaving}
+                  onPress={onDone}
+                />
+              )}
+              <ActionButton
+                label={submitLabel ?? (transactionId ? 'Save' : 'Add')}
+                kind="primary"
+                busy={isSaving}
+                disabled={disabled}
+                onPress={handleSave}
+              />
+            </View>
+          )}
 
-          <View style={styles.actions}>
-            {/* Add and edit get a Cancel here; a bank review uses the header's
-                Skip instead, so its Accept button stays full width. */}
-            {onSkip ? null : (
+          {onViewOriginal ? (
+            <View style={styles.linkGroup}>
               <Pressable
-                onPress={onDone}
-                disabled={isSaving}
+                onPress={onViewOriginal}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: isSaving }}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.cancelButton,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.separator,
-                    opacity: isSaving ? 0.5 : pressed ? 0.7 : 1,
-                  },
-                ]}>
-                <ThemedText themeColor="textSecondary" style={styles.actionLabel}>
-                  Cancel
+                style={({ pressed }) => [styles.link, { opacity: pressed ? 0.6 : 1 }]}>
+                <ThemedText style={[styles.linkText, { color: theme.text }]}>
+                  View Original Transaction
                 </ThemedText>
               </Pressable>
-            )}
-
-            <Pressable
-              onPress={handleSave}
-              disabled={isSaving}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isSaving, busy: isSaving }}
-              style={({ pressed }) => [
-                styles.actionButton,
-                { backgroundColor: theme.tint, opacity: isSaving ? 0.5 : pressed ? 0.8 : 1 },
-              ]}>
-              {isSaving ? (
-                <ActivityIndicator color={theme.onTint} />
-              ) : (
-                <ThemedText style={[styles.actionLabel, { color: theme.onTint }]}>
-                  {submitLabel ?? (transactionId ? 'Save' : 'Add')}
+              {note ? (
+                <ThemedText themeColor="textSecondary" style={styles.linkNote}>
+                  {note}
                 </ThemedText>
-              )}
-            </Pressable>
-          </View>
-
-          {transactionId ? (
+              ) : null}
+            </View>
+          ) : transactionId && !disabled && !showDeleteConfirm ? (
             <Pressable
-              onPress={confirmDelete}
+              onPress={() => setShowDeleteConfirm(true)}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.deleteButton, { opacity: pressed ? 0.6 : 1 }]}>
-              <ThemedText themeColor="destructive">Delete transaction</ThemedText>
+              style={({ pressed }) => [styles.link, { opacity: pressed ? 0.6 : 1 }]}>
+              <ThemedText style={[styles.linkText, { color: colors.link }]}>
+                Delete Transaction
+              </ThemedText>
             </Pressable>
           ) : null}
         </ScrollView>
@@ -609,11 +662,13 @@ export function TransactionForm({
 function TypeSelector({
   form,
   dispatch,
+  disabled,
 }: {
   form: FormState;
   dispatch: React.Dispatch<Parameters<typeof formReducer>[1]>;
+  disabled: boolean;
 }) {
-  const theme = useTheme();
+  const colors = useFormColors();
 
   const options = [
     { kind: 'expense' as const, symbol: 'minus.circle' as const, label: 'Expense' },
@@ -632,27 +687,13 @@ function TypeSelector({
           ? form.isMoneyTransferMode
           : !form.isMoneyTransferMode && form.type === option.kind;
 
-        const color =
-          option.kind === 'expense'
-            ? theme.expense
-            : option.kind === 'income'
-              ? theme.income
-              : selected
-                ? theme.tint
-                : theme.textSecondary;
-
-        // The web uses Tailwind's red-50/red-100 (and green equivalents): the
-        // same hue at low opacity, stronger when selected.
-        const background =
-          option.kind === 'transfer'
-            ? selected
-              ? theme.card
-              : theme.backgroundElement
-            : `${color}${selected ? '33' : '1A'}`;
+        const palette = colors[option.kind];
+        const color = 'fgOn' in palette && selected ? palette.fgOn : palette.fg;
 
         return (
           <Pressable
             key={option.kind}
+            disabled={disabled}
             onPress={() => {
               hapticSelect();
               if (option.kind === 'transfer') {
@@ -662,14 +703,14 @@ function TypeSelector({
               }
             }}
             accessibilityRole="button"
-            accessibilityState={{ selected }}
+            accessibilityState={{ selected, disabled }}
             accessibilityLabel={option.label}
             style={({ pressed }) => [
               styles.typeButton,
               {
-                backgroundColor: background,
-                borderColor: selected ? color : theme.separator,
-                opacity: pressed ? 0.7 : 1,
+                backgroundColor: selected ? palette.bgOn : palette.bg,
+                borderColor: selected ? palette.borderOn : palette.border,
+                opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
               },
             ]}>
             <SymbolView name={option.symbol} size={20} tintColor={color} />
@@ -683,8 +724,9 @@ function TypeSelector({
 /**
  * One of the two compact toggles beside the amount.
  *
- * Icon-only to match the type selector; the label is announced by VoiceOver and
- * the switch role exposes the checked state.
+ * Styled like the web's transfer type button, which they share a class with:
+ * white with a dark border when on, grey when off. Icon-only; the label is
+ * announced by VoiceOver and the switch role exposes the checked state.
  */
 function OptionToggle({
   symbol,
@@ -701,8 +743,7 @@ function OptionToggle({
   hint?: string;
   onChange: (value: boolean) => void;
 }) {
-  const theme = useTheme();
-  const tint = checked ? theme.tint : theme.textSecondary;
+  const palette = useFormColors().transfer;
 
   return (
     <Pressable
@@ -718,29 +759,32 @@ function OptionToggle({
       style={({ pressed }) => [
         styles.option,
         {
-          backgroundColor: checked ? theme.backgroundSelected : theme.card,
-          borderColor: checked ? theme.tint : theme.separator,
-          opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
+          backgroundColor: checked ? palette.bgOn : palette.bg,
+          borderColor: checked ? palette.borderOn : palette.border,
+          opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
         },
       ]}>
-      <SymbolView name={symbol} size={20} tintColor={tint} />
+      <SymbolView name={symbol} size={20} tintColor={checked ? palette.fgOn : palette.fg} />
     </Pressable>
   );
 }
 
-/** A labelled row that opens a picker. */
-function FieldRow({
-  label,
+/**
+ * A select field that opens a picker.
+ *
+ * Like the web's select, the label is the placeholder: it shows in the muted
+ * colour until something is chosen, then gives way to the value.
+ */
+export function FieldRow({
+  placeholder,
   value,
-  empty,
   marked,
   error,
   disabled,
   onPress,
 }: {
-  label: string;
-  value: string;
-  empty: boolean;
+  placeholder: string;
+  value?: string;
   /** Shows the blue dot indicating a title suggestion filled this field. */
   marked?: boolean;
   error?: string;
@@ -748,6 +792,7 @@ function FieldRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const colors = useFormColors();
 
   return (
     <View>
@@ -755,29 +800,35 @@ function FieldRow({
         onPress={onPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={empty ? label : `${label}: ${value}`}
+        accessibilityLabel={value ? `${placeholder}: ${value}` : placeholder}
         accessibilityState={{ disabled }}
         style={({ pressed }) => [
           styles.fieldRow,
+          styles.fieldShadow,
           {
-            backgroundColor: theme.card,
-            borderColor: theme.separator,
-            opacity: disabled ? 0.4 : pressed ? 0.6 : 1,
+            backgroundColor: colors.field,
+            borderColor: colors.fieldBorder,
+            opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
           },
         ]}>
-        <View style={styles.fieldLabel}>
-          <ThemedText themeColor="textSecondary" style={styles.fieldLabelText}>
-            {label}
-          </ThemedText>
-          {marked ? <View style={[styles.autoDot, { backgroundColor: theme.tint }]} /> : null}
-        </View>
-        <View style={styles.fieldValue}>
-          {empty ? null : (
-            <ThemedText numberOfLines={1}>{value}</ThemedText>
-          )}
-          <SymbolView name="chevron.right" size={12} tintColor={theme.textSecondary} />
-        </View>
+        <ThemedText
+          numberOfLines={1}
+          style={[
+            styles.fieldText,
+            styles.fieldValue,
+            { color: value ? colors.fieldText : theme.textSecondary },
+          ]}>
+          {value ?? placeholder}
+        </ThemedText>
+        <SymbolView name="chevron.down" size={14} tintColor={colors.chevron} />
       </Pressable>
+
+      {marked ? (
+        <View
+          style={[styles.autoDot, { backgroundColor: colors.badge }]}
+          pointerEvents="none"
+        />
+      ) : null}
 
       {error ? (
         <ThemedText themeColor="destructive" style={styles.fieldError}>
@@ -785,6 +836,52 @@ function FieldRow({
         </ThemedText>
       ) : null}
     </View>
+  );
+}
+
+/** Cancel, Save and the delete confirmation: the web's three big buttons. */
+export function ActionButton({
+  label,
+  kind,
+  busy,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  kind: 'cancel' | 'primary' | 'danger';
+  busy?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const colors = useFormColors();
+  const inert = busy || disabled;
+
+  const background =
+    kind === 'cancel' ? colors.field : kind === 'danger' ? colors.confirmBg : colors.saveBg;
+  const textColor = kind === 'cancel' ? colors.cancelText : colors.saveText;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={inert}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: inert, busy }}
+      style={({ pressed }) => [
+        styles.actionButton,
+        styles.actionShadow,
+        { backgroundColor: background },
+        kind === 'cancel' && { borderWidth: 1, borderColor: colors.fieldBorder },
+        { opacity: inert ? 0.5 : pressed ? 0.8 : 1 },
+      ]}>
+      {busy ? (
+        <ActivityIndicator color={textColor} />
+      ) : (
+        <View style={styles.actionContent}>
+          {kind === 'danger' ? <SymbolView name="trash" size={18} tintColor={textColor} /> : null}
+          <ThemedText style={[styles.actionLabel, { color: textColor }]}>{label}</ThemedText>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -801,20 +898,28 @@ function TransferWarning({
   sourceCurrency?: string;
   targetCurrency?: string;
 }) {
-  const theme = useTheme();
+  const colors = useFormColors();
 
   if (!sourceCurrency || !targetCurrency || sourceCurrency === targetCurrency) return null;
 
   return (
-    <View style={[styles.warning, { backgroundColor: theme.card }]}>
-      <SymbolView name="exclamationmark.triangle" size={15} tintColor={theme.warning} />
-      <ThemedText themeColor="textSecondary" style={styles.warningText}>
+    <View
+      style={[styles.warning, { backgroundColor: colors.noteBg, borderColor: colors.noteBorder }]}>
+      <ThemedText style={[styles.warningText, { color: colors.noteText }]}>
+        <ThemedText style={[styles.warningText, styles.bold, { color: colors.noteText }]}>
+          Note:
+        </ThemedText>{' '}
         Amount is in {targetCurrency}. {sourceCurrency} will be converted using the exchange rate
         on the transaction date.
       </ThemedText>
     </View>
   );
 }
+
+// Sizes follow the web modal: `h-12` fields (48), `rounded-lg` (8), `text-base`
+// (16), `gap-y-3` (12) and `px-4` (16).
+const FIELD_HEIGHT = 48;
+const FIELD_RADIUS = 8;
 
 const styles = StyleSheet.create({
   flex: {
@@ -828,23 +933,46 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   content: {
-    padding: Spacing.three,
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    gap: 12,
   },
-  card: {
-    borderRadius: Radius.medium,
-    overflow: 'hidden',
+  disabled: {
+    opacity: 0.5,
+  },
+  // Web `shadow-sm`.
+  fieldShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  // Web `shadow-lg`.
+  actionShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   errorSummary: {
-    borderRadius: Radius.medium,
-    padding: Spacing.three,
-    gap: Spacing.half,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 12,
+    gap: 2,
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   errorTitle: {
+    fontSize: 14,
     fontWeight: '600',
   },
   errorItem: {
-    fontSize: 13,
+    fontSize: 14,
+    paddingLeft: Spacing.three + Spacing.one,
   },
   typeRow: {
     flexDirection: 'row',
@@ -857,49 +985,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: Spacing.three,
-    borderRadius: Radius.small,
+    borderRadius: FIELD_RADIUS,
     borderWidth: 2,
   },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: 12,
   },
   amountField: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.three,
-    minHeight: 56,
+    paddingHorizontal: 12,
+    height: FIELD_HEIGHT,
     gap: Spacing.two,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
   },
   currencySymbol: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 16,
+    lineHeight: 24,
   },
   amountInput: {
     flex: 1,
-    fontSize: 30,
-    // Set alongside the size rather than left to the default, which would clip
-    // the digits' ascent the way the Balance total was clipped.
-    lineHeight: 38,
-    fontWeight: '600',
+    fontSize: 16,
+    height: FIELD_HEIGHT,
     fontVariant: ['tabular-nums'],
-    paddingVertical: Spacing.two,
   },
   currencyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   option: {
-    width: 56,
-    height: 56,
+    width: FIELD_HEIGHT,
+    height: FIELD_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.medium,
+    borderRadius: FIELD_RADIUS,
     borderWidth: 2,
   },
   fieldRow: {
@@ -908,29 +1032,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    minHeight: 48,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    height: FIELD_HEIGHT,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
   },
-  fieldLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  fieldLabelText: {
-    fontSize: 15,
-  },
-  autoDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  fieldText: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   fieldValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    flexShrink: 1,
+    flex: 1,
+  },
+  // Web: absolute -top-1 -right-1, 12px, 2px white border.
+  autoDot: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   fieldError: {
     fontSize: 12,
@@ -942,12 +1064,16 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.three,
   },
   titleInput: {
-    fontSize: 17,
+    fontSize: 16,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    minHeight: 48,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    height: FIELD_HEIGHT,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+  },
+  suggestions: {
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   suggestion: {
     paddingHorizontal: Spacing.three,
@@ -958,37 +1084,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   warning: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-    borderRadius: Radius.medium,
-    padding: Spacing.three,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+    padding: 12,
   },
   warningText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  bold: {
+    fontWeight: '700',
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
   },
+  // Web: py-4 with text-lg.
   actionButton: {
     flex: 1,
-    height: 50,
-    borderRadius: Radius.medium,
+    height: 60,
+    borderRadius: FIELD_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: {
-    borderWidth: 1,
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   actionLabel: {
-    fontSize: 17,
+    fontSize: 18,
+    lineHeight: 28,
     fontWeight: '600',
   },
-  deleteButton: {
+  link: {
     alignItems: 'center',
-    paddingVertical: Spacing.three,
+    paddingVertical: 4,
+  },
+  linkGroup: {
+    gap: 4,
+  },
+  linkText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  linkNote: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

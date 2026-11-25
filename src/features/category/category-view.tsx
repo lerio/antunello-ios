@@ -6,7 +6,8 @@ import { CategoryGlyph } from '@/components/category-icon';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { CATEGORIES_WITH_TYPES, SUB_CATEGORIES } from '@/domain/types';
+import { allMainCategories, subCategoriesByName } from '@/features/categories/registry';
+import { useCustomCategories } from '@/features/categories/use-categories';
 import { CategoryChart } from '@/features/category/category-chart';
 import { useCategoryTransactions } from '@/features/category/use-category-transactions';
 import { TransactionRow } from '@/features/transactions/components/transaction-row';
@@ -36,7 +37,9 @@ export function CategoryView({ category, subCategory }: CategoryViewProps) {
   const { openTransaction } = useTransactionRowNavigation();
   const [timeRange, setTimeRange] = useState<TimeRange>('1y');
 
-  const isValid = isValidCategory(category, subCategory);
+  // Custom categories load asynchronously; until they do, a custom one would look unknown.
+  const { isLoading: categoriesLoading } = useCustomCategories();
+  const isValid = categoriesLoading || isValidCategory(category, subCategory);
 
   const { transactions, stats, isLoading, isError, refresh } = useCategoryTransactions(
     isValid ? category : null,
@@ -121,11 +124,11 @@ export function CategoryView({ category, subCategory }: CategoryViewProps) {
  * so rather than render an empty page that looks like a bug.
  */
 function isValidCategory(category: string, subCategory?: string): boolean {
-  const known = CATEGORIES_WITH_TYPES.some((entry) => entry.category === category);
+  const known = allMainCategories().includes(category);
   if (!known) return false;
   if (!subCategory) return true;
 
-  return (SUB_CATEGORIES[category] ?? []).includes(subCategory);
+  return subCategoriesByName(category).includes(subCategory);
 }
 
 const styles = StyleSheet.create({

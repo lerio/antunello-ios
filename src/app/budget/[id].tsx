@@ -1,11 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { BudgetForm } from '@/features/budgets/budget-form';
 import { useBudgets } from '@/features/budgets/use-budgets';
+import { TransactionSheet } from '@/features/transactions/form/transaction-sheet';
 
 /**
  * Change or remove a budget.
@@ -24,7 +24,7 @@ export default function EditBudgetScreen() {
 
   if (!item) {
     return (
-      <Screen>
+      <TransactionSheet avoidKeyboard onDismiss={() => router.back()}>
         <View style={styles.centered}>
           {isLoading ? (
             <ActivityIndicator />
@@ -32,16 +32,19 @@ export default function EditBudgetScreen() {
             <ThemedText themeColor="textSecondary">That budget no longer exists.</ThemedText>
           )}
         </View>
-      </Screen>
+      </TransactionSheet>
     );
   }
 
-  return <BudgetForm budget={item.budget} onDone={() => router.back()} />;
+  return (
+    <TransactionSheet avoidKeyboard onDismiss={() => router.back()}>
+      {(dismiss) => <BudgetForm budget={item.budget} onDone={dismiss} />}
+    </TransactionSheet>
+  );
 }
 
 const styles = StyleSheet.create({
   centered: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.four,

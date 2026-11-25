@@ -45,13 +45,19 @@ function FloatingButton({ icon: Icon, label, onPress, bottom }: FloatingButtonPr
  * adding `BottomTabInset` here would double-count it and leave the button
  * floating halfway up the list.
  */
-export function AddTransactionButton({ onPress }: { onPress: () => void }) {
+export function AddTransactionButton({
+  onPress,
+  label = 'Add transaction',
+}: {
+  onPress: () => void;
+  label?: string;
+}) {
   const insets = useSafeAreaInsets();
 
   return (
     <FloatingButton
       icon={Plus}
-      label="Add transaction"
+      label={label}
       onPress={onPress}
       bottom={insets.bottom + Spacing.three}
     />

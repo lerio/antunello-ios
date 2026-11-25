@@ -95,7 +95,8 @@ function RootNavigator() {
           options={{
             headerShown: false,
             presentation: 'transparentModal',
-            animation: 'slide_from_bottom',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
           }}
         />
         <Stack.Screen
@@ -103,16 +104,63 @@ function RootNavigator() {
           options={{
             headerShown: false,
             presentation: 'transparentModal',
-            animation: 'slide_from_bottom',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
+        />
+        <Stack.Screen
+          name="category/edit"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
+        />
+        <Stack.Screen
+          name="fund/new"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
+        />
+        <Stack.Screen
+          name="fund/[id]"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
+        />
+        <Stack.Screen
+          name="category/new"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
           }}
         />
         <Stack.Screen
           name="budget/new"
-          options={{ headerShown: true, presentation: 'modal', title: 'New Budget' }}
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
         />
         <Stack.Screen
           name="budget/[id]"
-          options={{ headerShown: true, presentation: 'modal', title: 'Budget' }}
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            // The sheet animates itself, so the backdrop can fade instead of sliding.
+            animation: 'none',
+          }}
         />
         <Stack.Screen
           name="change-password"

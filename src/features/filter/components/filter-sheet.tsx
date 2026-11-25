@@ -41,6 +41,7 @@ import {
 } from '@/features/filter/filter-criteria';
 import { ChipRow } from '@/features/filter/components/chip-row';
 import { useCurrencies } from '@/features/filter/use-currencies';
+import { useCustomCategories } from '@/features/categories/use-categories';
 import { useFunds } from '@/features/funds/use-funds';
 import { useAvailableYears } from '@/features/year/use-available-years';
 import { useTheme } from '@/hooks/use-theme';
@@ -108,6 +109,8 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
   const { data: currencies } = useCurrencies();
   const { data: funds } = useFunds();
   const years = useAvailableYears();
+  // Custom categories feed the option lists below; they are memoised on this.
+  const { data: customCategories } = useCustomCategories();
 
   // No local copy of the criteria: every control dispatches through the reducer
   // and the result goes straight back to the parent, which owns the state. A
@@ -117,14 +120,18 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
     onChange(filterReducer(criteria, action));
   }
 
-  const categoryOptions: PickerOption[] = useMemo(
-    () => selectableCategories(criteria.types).map((category) => ({
-      value: category.category,
-      label: category.category,
-      detail: category.type === 'income' ? 'Income' : 'Expense',
-    })),
-    [criteria.types],
-  );
+  const categoryOptions: PickerOption[] = useMemo(() => {
+    // A name can exist as both an income and an expense category; one option covers both.
+    const byName = new Map<string, PickerOption>();
+    for (const category of selectableCategories(criteria.types)) {
+      const label = category.type === 'income' ? 'Income' : 'Expense';
+      const existing = byName.get(category.category);
+      if (existing) existing.detail = 'Income · Expense';
+      else byName.set(category.category, { value: category.category, label: category.category, detail: label });
+    }
+    return [...byName.values()];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [criteria.types, customCategories]);
 
   const subCategoryOptions: PickerOption[] = useMemo(
     () =>
@@ -133,7 +140,8 @@ export function FilterSheet({ visible, criteria, onChange, onClose }: FilterShee
         label: option.label,
         group: option.group,
       })),
-    [criteria],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [criteria, customCategories],
   );
 
   const fundOptions: PickerOption[] = useMemo(

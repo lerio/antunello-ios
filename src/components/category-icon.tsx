@@ -24,6 +24,10 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react-native';
+import * as LucideIcons from 'lucide-react-native';
+
+import { customIconName } from '@/features/categories/registry';
+import { useCustomCategories } from '@/features/categories/use-categories';
 
 /**
  * The same Lucide icons the web app uses, rather than SF Symbol lookalikes.
@@ -64,10 +68,24 @@ const SUBCATEGORY_ICONS: Record<string, LucideIcon> = {
   'Vehicles and Maintenance': Wrench,
 };
 
+/** A Lucide icon by component name, e.g. "Utensils"; undefined if this version has no such icon. */
+export function lucideIconByName(name: string): LucideIcon | undefined {
+  return (LucideIcons as unknown as Record<string, LucideIcon | undefined>)[name];
+}
+
+/** The Lucide component name of a category's icon — custom or built-in — for showing it in a form. */
+export function categoryIconName(category: string): string | undefined {
+  return customIconName(category) ?? CATEGORY_ICONS[category]?.displayName;
+}
+
 function iconFor(category: string, subCategory?: string | null): LucideIcon {
+  const customName = customIconName(category);
+  const custom = customName ? lucideIconByName(customName) : undefined;
+
   return (
     (subCategory ? SUBCATEGORY_ICONS[subCategory] : undefined) ??
     CATEGORY_ICONS[category] ??
+    custom ??
     CATEGORY_ICONS.Services
   );
 }
@@ -86,6 +104,8 @@ export function CategoryGlyph({
   size = 19,
   color,
 }: CategoryGlyphProps) {
+  // Re-renders this glyph when the user's custom category icons load.
+  useCustomCategories();
   const Icon = iconFor(category, subCategory);
   // The lookup returns one of the module-level Lucide components, not a
   // component created here; the compiler rule cannot see through the map.

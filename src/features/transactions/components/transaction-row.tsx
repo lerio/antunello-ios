@@ -78,31 +78,31 @@ export const TransactionRow = memo(function TransactionRow({
         styles.row,
         {
           opacity: pressed ? baseOpacity * 0.7 : baseOpacity,
-          backgroundColor: isSplitInstance ? theme.backgroundElement : 'transparent',
+          backgroundColor: isSplitInstance ? theme.splitRow : 'transparent',
         },
       ]}>
       {isTransfer ? (
-        <View style={[styles.icon, { backgroundColor: theme.backgroundElement }]}>
-          <ArrowRightLeft size={20} color={theme.textSecondary} strokeWidth={2} />
+        <View style={[styles.icon, { backgroundColor: theme.chipSurface }]}>
+          <ArrowRightLeft size={20} color={theme.rowMeta} strokeWidth={2} />
         </View>
       ) : (
         <CategoryIcon
           category={transaction.main_category}
           subCategory={transaction.sub_category}
           onPress={onCategoryPress}
-          background={theme.backgroundElement}
-          tint={theme.textSecondary}
+          background={theme.chipSurface}
+          tint={theme.rowMeta}
         />
       )}
 
       <View style={styles.middle}>
-        <ThemedText style={styles.title} numberOfLines={1}>
+        <ThemedText style={[styles.title, { color: theme.rowTitle }]} numberOfLines={1}>
           {transaction.title}
         </ThemedText>
 
         <View style={styles.metaRow}>
           {isTransfer ? (
-            <ThemedText themeColor="textSecondary" style={styles.meta} numberOfLines={1}>
+            <ThemedText style={[styles.meta, { color: theme.rowMeta }]} numberOfLines={1}>
               Movement
             </ThemedText>
           ) : (
@@ -128,8 +128,7 @@ export const TransactionRow = memo(function TransactionRow({
 
         {showOriginalCurrency && eurAmountIsKnown ? (
           <PrivacyValue
-            themeColor="textSecondary"
-            style={styles.original}
+            style={[styles.original, { color: theme.rowFaint }]}
             numberOfLines={1}>
             {formatCurrency(Math.abs(originalAmount), transaction.currency)}
           </PrivacyValue>
@@ -138,9 +137,9 @@ export const TransactionRow = memo(function TransactionRow({
         {isSplitInstance || transaction.split_remaining_count ? (
           <View style={styles.splitChipSlot}>
             <View
-              style={[styles.splitChip, { backgroundColor: theme.backgroundSelected }]}>
-              <GitFork size={12} color={theme.textSecondary} strokeWidth={2} />
-              <ThemedText themeColor="textSecondary" style={styles.splitChipLabel}>
+              style={[styles.splitChip, { backgroundColor: theme.chipSurface }]}>
+              <GitFork size={12} color={theme.rowMeta} strokeWidth={2} />
+              <ThemedText style={[styles.splitChipLabel, { color: theme.rowMeta }]}>
                 {transaction.split_remaining_count
                   ? `Split · ${transaction.split_remaining_count} left`
                   : 'Split'}
@@ -239,11 +238,12 @@ function CategoryLabel({
   subCategory?: string;
   onPress?: (category: string, subCategory: string) => void;
 }) {
+  const theme = useTheme();
   const label = subCategory ?? mainCategory;
 
   if (!onPress || !subCategory) {
     return (
-      <ThemedText themeColor="textSecondary" style={styles.meta} numberOfLines={1}>
+      <ThemedText style={[styles.meta, { color: theme.rowMeta }]} numberOfLines={1}>
         {label}
       </ThemedText>
     );
@@ -255,7 +255,7 @@ function CategoryLabel({
       hitSlop={6}
       accessibilityRole="button"
       accessibilityLabel={`Open ${subCategory}`}>
-      <ThemedText themeColor="textSecondary" style={styles.meta} numberOfLines={1}>
+      <ThemedText style={[styles.meta, { color: theme.rowMeta }]} numberOfLines={1}>
         {label}
       </ThemedText>
     </Pressable>
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '600',
+    fontWeight: '500', // web font-medium
     textTransform: 'uppercase',
   },
   metaRow: {
@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
   splitChipLabel: {
     fontSize: 12,
     lineHeight: 14,
+    fontWeight: '500',
   },
   amounts: {
     alignSelf: 'stretch',

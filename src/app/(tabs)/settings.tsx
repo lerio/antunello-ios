@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
+import { AddTransactionButton } from '@/components/floating-buttons';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { Card, cardStyle } from '@/components/card';
@@ -173,6 +174,13 @@ export default function SettingsScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      {tab === 'funds' ? (
+        <AddTransactionButton label="Add fund" onPress={() => router.push('/fund/new')} />
+      ) : null}
+      {tab === 'categories' ? (
+        <AddTransactionButton label="Add category" onPress={() => router.push('/category/new')} />
+      ) : null}
     </Screen>
   );
 }

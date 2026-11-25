@@ -17,11 +17,11 @@ export function useCategoryCounts() {
   return useQuery({
     queryKey: qk.categoryCounts(),
     queryFn: async (): Promise<CategoryCounts> => {
-      const rows = await fetchAllBatches<{ main_category: string; sub_category: string | null }>(
+      const rows = await fetchAllBatches<{ main_category: string; sub_category: string | null; type: string }>(
         (from, to) =>
           supabase
             .from('transactions')
-            .select('main_category, sub_category')
+            .select('main_category, sub_category, type')
             .order('id')
             .range(from, to),
       );

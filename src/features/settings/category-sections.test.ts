@@ -9,18 +9,21 @@ import { describe, it } from 'node:test';
 
 import { CATEGORIES_WITH_TYPES } from '@/domain/types';
 import {
+  canDeleteCategory,
   categorySections,
+  categoryTransactionCount,
   countCategories,
   subcategoryKey,
+  subcategoryTransactionCount,
 } from '@/features/settings/category-sections';
 
 describe('category sections', () => {
   const sections = categorySections();
 
-  it('orders Income, Expense, Movement', () => {
+  it('orders Income, Expenses, Movements', () => {
     assert.deepEqual(
       sections.map((s) => s.title),
-      ['Income', 'Expense', 'Movement'],
+      ['Income', 'Expenses', 'Movements'],
     );
   });
 
@@ -58,5 +61,44 @@ describe('counting transactions per category', () => {
 
   it('leaves unused categories absent', () => {
     assert.equal(counts.byCategory.Travel, undefined);
+  });
+});
+
+describe('transaction counts and delete rules', () => {
+  const entry = (category: string, type: 'income' | 'expense', subcategories: string[] = []) => ({
+    category,
+    type,
+    subcategories,
+    isCustom: true,
+  });
+  const gifts = [entry('Gifts', 'income', ['Birthday']), entry('Gifts', 'expense')];
+  const counts = countCategories([
+    { main_category: 'Gifts', sub_category: 'Birthday', type: 'income' },
+    { main_category: 'Gifts', sub_category: null, type: 'expense' },
+    { main_category: 'Gifts', sub_category: null, type: 'expense' },
+    { main_category: 'Dining', sub_category: null, type: 'expense' },
+  ]);
+
+  it('counts a name shared across types per type', () => {
+    assert.equal(categoryTransactionCount(counts, gifts, gifts[0]), 1);
+    assert.equal(categoryTransactionCount(counts, gifts, gifts[1]), 2);
+    assert.equal(subcategoryTransactionCount(counts, gifts, gifts[0], 'Birthday'), 1);
+  });
+
+  it('keeps the plain count for an unshared name', () => {
+    const dining = [entry('Dining', 'expense')];
+    assert.equal(categoryTransactionCount(counts, dining, dining[0]), 1);
+  });
+
+  it('is undefined while counts load', () => {
+    assert.equal(categoryTransactionCount(undefined, gifts, gifts[0]), undefined);
+  });
+
+  it('allows deleting an empty subcategory, and a main only when it has no subs either', () => {
+    assert.equal(canDeleteCategory(gifts[0], 'Birthday', 0), true);
+    assert.equal(canDeleteCategory(gifts[0], 'Birthday', 1), false);
+    assert.equal(canDeleteCategory(gifts[0], null, 0), false, 'has a subcategory');
+    assert.equal(canDeleteCategory(gifts[1], null, 0), true);
+    assert.equal(canDeleteCategory(gifts[1], null, undefined), false, 'counts not loaded');
   });
 });

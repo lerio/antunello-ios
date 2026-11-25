@@ -1,4 +1,3 @@
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -6,10 +5,11 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 import { cardStyle } from '@/components/card';
 import { CategoryGlyph } from '@/components/category-icon';
 import { EmptyState } from '@/components/empty-state';
+import { AddTransactionButton } from '@/components/floating-buttons';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Layout, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, Layout, Spacing } from '@/constants/theme';
 import { formatCurrency } from '@/domain/currency';
 import { useBudgets, type BudgetWithProgress } from '@/features/budgets/use-budgets';
 import { PrivacyValue } from '@/features/privacy/privacy-value';
@@ -24,7 +24,6 @@ import { useTheme } from '@/hooks/use-theme';
  */
 export function BudgetsView() {
   const router = useRouter();
-  const theme = useTheme();
   const { items, isLoading, isError, error, refresh } = useBudgets();
 
   const handleAdd = useCallback(() => router.push('/budget/new'), [router]);
@@ -60,22 +59,9 @@ export function BudgetsView() {
           ))
         )}
 
-        {items.length > 0 ? (
-          <Pressable
-            onPress={handleAdd}
-            accessibilityRole="button"
-            accessibilityLabel="Add a budget"
-            style={({ pressed }) => [
-              styles.addButton,
-              { borderColor: theme.separator, opacity: pressed ? 0.6 : 1 },
-            ]}>
-            <SymbolView name="plus" size={15} tintColor={theme.tint} />
-            <ThemedText themeColor="tint" style={styles.addLabel}>
-              Add budget
-            </ThemedText>
-          </Pressable>
-        ) : null}
       </ScrollView>
+
+      <AddTransactionButton label="Add budget" onPress={handleAdd} />
     </Screen>
   );
 }
@@ -215,19 +201,6 @@ const styles = StyleSheet.create({
   figure: {
     fontSize: 12,    // text-xs
     fontVariant: ['tabular-nums'],
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    height: 44,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  addLabel: {
-    fontSize: 16,
-    fontWeight: '500',
   },
   empty: {
     alignItems: 'center',

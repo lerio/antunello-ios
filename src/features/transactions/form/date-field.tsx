@@ -3,16 +3,18 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import {
   MINUTE_INTERVAL,
   roundToMinuteInterval,
 } from '@/features/transactions/form/minute-interval';
+import { useFormColors } from '@/hooks/use-form-colors';
 import { useTheme } from '@/hooks/use-theme';
 
 type DateFieldProps = {
   value: Date;
   onChange: (value: Date) => void;
+  disabled?: boolean;
 };
 
 /**
@@ -22,8 +24,9 @@ type DateFieldProps = {
  * `minuteInterval` for the time modes, and a combined picker risks silently
  * offering one-minute steps.
  */
-export function DateField({ value, onChange }: DateFieldProps) {
+export function DateField({ value, onChange, disabled = false }: DateFieldProps) {
   const theme = useTheme();
+  const colors = useFormColors();
   const [mode, setMode] = useState<'date' | 'time' | null>(null);
 
   // `onChange` is deprecated in this version of the picker; `onValueChange`
@@ -44,7 +47,8 @@ export function DateField({ value, onChange }: DateFieldProps) {
     <View
       style={[
         styles.container,
-        { backgroundColor: theme.card, borderColor: theme.separator },
+        { backgroundColor: colors.field, borderColor: colors.fieldBorder },
+        disabled && styles.disabled,
       ]}>
       <PickerRow
         label="Date"
@@ -55,6 +59,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
         })}
         onPress={() => setMode(mode === 'date' ? null : 'date')}
         active={mode === 'date'}
+        disabled={disabled}
       />
 
       <View style={[styles.divider, { backgroundColor: theme.separator }]} />
@@ -64,6 +69,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
         value={value.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
         onPress={() => setMode(mode === 'time' ? null : 'time')}
         active={mode === 'time'}
+        disabled={disabled}
       />
 
       {mode ? (
@@ -85,17 +91,21 @@ function PickerRow({
   value,
   onPress,
   active,
+  disabled,
 }: {
   label: string;
   value: string;
   onPress: () => void;
   active: boolean;
+  disabled: boolean;
 }) {
   const theme = useTheme();
+  const colors = useFormColors();
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       accessibilityState={{ expanded: active }}
@@ -104,16 +114,19 @@ function PickerRow({
         { backgroundColor: pressed || active ? theme.backgroundElement : 'transparent' },
       ]}>
       <ThemedText themeColor="textSecondary">{label}</ThemedText>
-      <ThemedText>{value}</ThemedText>
+      <ThemedText style={{ color: colors.fieldText }}>{value}</ThemedText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8, // web rounded-lg
+    borderWidth: 1,
     overflow: 'hidden',
+  },
+  disabled: {
+    opacity: 0.5,
   },
   row: {
     flexDirection: 'row',

@@ -80,6 +80,9 @@ export const qk = {
   /** Transaction counts per category and subcategory, for Settings → Categories. */
   categoryCounts: () => ['category-counts'] as const,
 
+  /** The user's own categories (`custom_categories`). */
+  customCategories: () => ['custom-categories'] as const,
+
   /** Budget targets with spending progress. */
   budgets: () => ['budgets'] as const,
 

@@ -45,6 +45,21 @@ export const Colors = {
     warning: '#B45309',
     /** Destructive actions — matches web `--destructive` (0 84.2% 60.2%). */
     destructive: '#DC2626',
+
+    /** Row icon circle and split badge — web `bg-gray-100`. */
+    chipSurface: '#F3F4F6',
+    /** Split row tint — web `bg-muted/40`. */
+    splitRow: '#F5F5F566',
+    /** Row title — web `text-gray-800`. */
+    rowTitle: '#1E2939',
+    /** Row subtitle, icon glyph, split badge text — web `text-gray-500`. */
+    rowMeta: '#6A7282',
+    /** Original-currency amount — web `text-gray-400`. */
+    rowFaint: '#99A1AF',
+    /** Day header date — web `text-gray-600`. */
+    dayLabel: '#4A5565',
+    /** Today ring — web `ring-foreground/40`. */
+    todayRing: '#0A0A0A66',
   },
   dark: {
     text: '#FAFAFA',           // foreground: 0 0% 98%
@@ -78,6 +93,21 @@ export const Colors = {
     /** Warning — matches web dark `--warning` (38 92% 50%). */
     warning: '#FBBF24',
     destructive: '#EF4444',
+
+    /** Row icon circle and split badge — web `dark:bg-gray-700`. */
+    chipSurface: '#364153',
+    /** Split row tint — web `bg-muted/40`. */
+    splitRow: '#18181B66',
+    /** Row title — web `dark:text-gray-200`. */
+    rowTitle: '#E5E7EB',
+    /** Row subtitle, icon glyph, split badge text — web `dark:text-gray-400`. */
+    rowMeta: '#99A1AF',
+    /** Original-currency amount — web `dark:text-gray-500`. */
+    rowFaint: '#6A7282',
+    /** Day header date — web `dark:text-gray-400`. */
+    dayLabel: '#99A1AF',
+    /** Today ring — web `ring-foreground/40`. */
+    todayRing: '#FAFAFA66',
   },
 } as const;
 
@@ -163,4 +193,59 @@ export const CardShadow = {
   shadowOpacity: 0.05,
   shadowRadius: 2,
   elevation: 1,
+} as const;
+
+/**
+ * Colours of the transaction form, copied from the web modal's Tailwind classes
+ * (`transaction-form-modal.tsx`, `styling-utils.ts`) so the two forms match.
+ */
+export const FormColors = {
+  light: {
+    sheet: '#FFFFFF',            // bg-white
+    field: '#FFFFFF',            // bg-white
+    fieldBorder: '#D1D5DC',      // border-gray-300
+    fieldText: '#101828',        // text-gray-900
+    icon: '#6A7282',             // text-gray-500
+    chevron: '#99A1AF',          // text-gray-400
+    cancelText: '#364153',       // text-gray-700
+    saveBg: '#000000',           // bg-black
+    saveText: '#FFFFFF',
+    link: '#E7000B',             // text-red-600
+    confirmBg: '#E7000B',        // bg-red-600
+    badge: '#2B7FFF',            // bg-blue-500
+    expense: { bg: '#FEF2F2', bgOn: '#FFE2E2', fg: '#C10007', border: '#E5E7EB', borderOn: '#FB2C36' },
+    income: { bg: '#F0FDF4', bgOn: '#DCFCE7', fg: '#008236', border: '#E5E7EB', borderOn: '#00C950' },
+    transfer: { bg: '#F9FAFB', bgOn: '#FFFFFF', fg: '#364153', fgOn: '#101828', border: '#E5E7EB', borderOn: '#101828' },
+    errorBg: '#FEF2F2',          // bg-red-50
+    errorBorder: '#FFA2A2',      // border-red-300
+    errorTitle: '#C10007',       // text-red-700
+    errorText: '#E7000B',        // text-red-600
+    noteBg: '#FEFCE8',           // bg-yellow-50
+    noteBorder: '#FFF085',       // border-yellow-200
+    noteText: '#894B00',         // text-yellow-800
+  },
+  dark: {
+    sheet: '#101828',            // bg-gray-900
+    field: '#1E2939',            // bg-gray-800
+    fieldBorder: '#4A5565',      // border-gray-600
+    fieldText: '#F3F4F6',        // text-gray-100
+    icon: '#99A1AF',             // text-gray-400
+    chevron: '#99A1AF',
+    cancelText: '#D1D5DC',       // text-gray-300
+    saveBg: '#1E2939',           // bg-gray-800
+    saveText: '#FFFFFF',
+    link: '#FF6467',             // text-red-400
+    confirmBg: '#C10007',        // bg-red-700
+    badge: '#2B7FFF',
+    expense: { bg: '#82181A33', bgOn: '#82181A80', fg: '#FFA2A2', border: '#4A5565', borderOn: '#FF6467' },
+    income: { bg: '#0D542B33', bgOn: '#0D542B80', fg: '#7BF1A8', border: '#4A5565', borderOn: '#05DF72' },
+    transfer: { bg: '#1E2939', bgOn: '#1E2939', fg: '#D1D5DC', fgOn: '#FFFFFF', border: '#4A5565', borderOn: '#FFFFFF' },
+    errorBg: '#46080966',        // bg-red-950/40
+    errorBorder: '#9F0712',      // border-red-800
+    errorTitle: '#FF6467',       // text-red-400
+    errorText: '#FF6467',
+    noteBg: '#733E0A33',         // bg-yellow-900/20
+    noteBorder: '#894B00',       // border-yellow-800
+    noteText: '#FFF085',         // text-yellow-200
+  },
 } as const;

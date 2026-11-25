@@ -13,7 +13,7 @@
  * tested without rendering anything.
  */
 
-import { CATEGORIES_WITH_TYPES, SUB_CATEGORIES } from '@/domain/types';
+import { allCategories, subCategoriesByName } from '@/features/categories/registry';
 
 /** The three things a transaction can be, from the filter's point of view. */
 export type FilterType = 'income' | 'expense' | 'movement';
@@ -96,9 +96,9 @@ export function labelOfSubCategory(subCategory: string): string {
 export function selectableCategories(types: readonly FilterType[]) {
   const hasIncomeOrExpense = types.includes('income') || types.includes('expense');
 
-  if (!hasIncomeOrExpense || types.length === 0) return CATEGORIES_WITH_TYPES;
+  if (!hasIncomeOrExpense || types.length === 0) return allCategories();
 
-  return CATEGORIES_WITH_TYPES.filter((category) => types.includes(category.type));
+  return allCategories().filter((category) => types.includes(category.type));
 }
 
 export type SubCategoryOption = { value: string; label: string; group: string };
@@ -120,19 +120,21 @@ export function selectableSubCategories(criteria: FilterCriteria): SubCategoryOp
   );
 
   if (criteria.mainCategories.length === 0) {
-    return selectableCategories(criteria.types).flatMap((category) =>
+    const all = selectableCategories(criteria.types).flatMap((category) =>
       category.subcategories.map((sub) => ({
         value: `${category.category}::${sub}`,
         label: sub,
         group: category.category,
       })),
     );
+    // Same-named categories of different types can repeat a subcategory.
+    return all.filter((option, i) => all.findIndex((o) => o.value === option.value) === i);
   }
 
   return criteria.mainCategories
     .filter((main) => validCategories.includes(main))
     .flatMap((main) =>
-      (SUB_CATEGORIES[main] ?? []).map((sub) => ({
+      subCategoriesByName(main).map((sub) => ({
         value: `${main}::${sub}`,
         label: sub,
         group: main,

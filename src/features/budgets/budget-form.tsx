@@ -1,10 +1,6 @@
-import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,13 +9,15 @@ import {
 } from 'react-native';
 
 import { PickerSheet } from '@/components/picker-sheet';
-import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { Budget } from '@/domain/types';
+import { useCustomCategories } from '@/features/categories/use-categories';
 import { selectableBudgetCategories } from '@/features/budgets/budget-progress';
+import { ActionButton, FieldRow } from '@/features/transactions/form/transaction-form';
 import { useBudgetMutations, useBudgets } from '@/features/budgets/use-budgets';
 import { messageOf } from '@/lib/errors';
+import { useFormColors } from '@/hooks/use-form-colors';
 import { useTheme } from '@/hooks/use-theme';
 
 type BudgetFormProps = {
@@ -31,14 +29,14 @@ type BudgetFormProps = {
 /**
  * Add or edit a budget.
  *
- * One component for both, as on the web: the only differences are that the
- * category is fixed once set — moving a budget to a category that already has
+ * One component for both, as on the web, laid out like the transaction form
+ * inside the same bottom sheet. The category is fixed once set — moving a budget to a category that already has
  * one would leave two competing for the same spending — and that editing offers
  * a delete.
  */
 export function BudgetForm({ budget, onDone }: BudgetFormProps) {
   const theme = useTheme();
-  const router = useRouter();
+  const colors = useFormColors();
   const isEdit = budget !== null;
 
   const { takenCategories } = useBudgets();
@@ -47,15 +45,19 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
   const [category, setCategory] = useState(budget?.category ?? '');
   const [amount, setAmount] = useState(budget ? String(budget.amount) : '');
   const [isPickerOpen, setPickerOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Custom categories feed the options below; they are memoised on this.
+  const { data: customCategories } = useCustomCategories();
   const categoryOptions = useMemo(
     () =>
       selectableBudgetCategories(takenCategories, budget?.category).map((name) => ({
         value: name,
         label: name,
       })),
-    [takenCategories, budget?.category],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [takenCategories, budget?.category, customCategories],
   );
 
   const parsedAmount = Number(amount.trim());
@@ -83,154 +85,102 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!budget) return;
 
-    Alert.alert('Delete this budget?', `${budget.category} will no longer be tracked.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteBudget.mutateAsync(budget.id);
-            onDone();
-          } catch (err) {
-            setError(messageOf(err));
-          }
-        },
-      },
-    ]);
+    try {
+      await deleteBudget.mutateAsync(budget.id);
+      onDone();
+    } catch (err) {
+      setError(messageOf(err));
+      setShowDeleteConfirm(false);
+    }
   }
 
   return (
-    <Screen>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <>
         <ScrollView
+          style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets>
-          {isEdit ? (
-            <View style={styles.field}>
-              <ThemedText themeColor="textSecondary" style={styles.label}>
-                Category
-              </ThemedText>
-              <ThemedText style={styles.categoryName}>{budget.category}</ThemedText>
-            </View>
-          ) : (
-            <View style={styles.field}>
-              <ThemedText themeColor="textSecondary" style={styles.label}>
-                Category
-              </ThemedText>
-              <Pressable
-                onPress={() => setPickerOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Choose a category"
-                style={({ pressed }) => [
-                  styles.input,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.separator,
-                    opacity: pressed ? 0.6 : 1,
-                  },
-                ]}>
-                <ThemedText
-                  themeColor={category === '' ? 'textSecondary' : 'text'}
-                  style={styles.inputText}
-                  numberOfLines={1}>
-                  {category === '' ? 'Select a category' : category}
-                </ThemedText>
-              </Pressable>
-            </View>
-          )}
+          keyboardDismissMode="interactive"
+          // No automaticallyAdjustKeyboardInsets: the sheet lifts itself above the
+          // keyboard, and insetting the scroll view as well left a keyboard-sized gap.
+          >
+          <FieldRow
+            placeholder="Category"
+            value={category || undefined}
+            disabled={isEdit || isBusy}
+            onPress={() => setPickerOpen(true)}
+          />
 
-          <View style={styles.field}>
-            <ThemedText themeColor="textSecondary" style={styles.label}>
-              Monthly limit
-            </ThemedText>
-            <View
-              style={[
-                styles.input,
-                styles.amountRow,
-                { backgroundColor: theme.card, borderColor: theme.separator },
-              ]}>
-              <ThemedText themeColor="textSecondary" style={styles.currency}>
-                {'€'}
-              </ThemedText>
-              <TextInput
-                value={amount}
-                onChangeText={(next) => setAmount(next.replace(/[^0-9.]/g, ''))}
-                placeholder="0.00"
-                placeholderTextColor={theme.textSecondary}
-                keyboardType="decimal-pad"
-                inputMode="decimal"
-                style={[styles.amountInput, { color: theme.text }]}
-                accessibilityLabel="Monthly limit"
-              />
-            </View>
+          <View
+            style={[
+              styles.amountField,
+              { backgroundColor: colors.field, borderColor: colors.fieldBorder },
+            ]}>
+            <ThemedText style={[styles.currencySymbol, { color: colors.icon }]}>{'€'}</ThemedText>
+            <TextInput
+              value={amount}
+              onChangeText={(next) => setAmount(next.replace(',', '.').replace(/[^0-9.]/g, ''))}
+              placeholder="Monthly limit"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="decimal-pad"
+              editable={!isBusy}
+              style={[styles.amountInput, { color: colors.fieldText }]}
+              accessibilityLabel="Monthly limit"
+            />
           </View>
 
           {error ? (
-            <ThemedText themeColor="destructive" style={styles.error}>
-              {error}
-            </ThemedText>
+            <View
+              style={[
+                styles.errorBox,
+                { backgroundColor: colors.errorBg, borderColor: colors.errorBorder },
+              ]}
+              accessibilityRole="alert">
+              <SymbolView name="exclamationmark.circle" size={16} tintColor={colors.errorTitle} />
+              <ThemedText style={[styles.errorText, { color: colors.errorTitle }]}>{error}</ThemedText>
+            </View>
           ) : null}
 
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => router.back()}
-              disabled={isBusy}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.button,
-                {
-                  backgroundColor: theme.backgroundElement,
-                  opacity: pressed || isBusy ? 0.6 : 1,
-                },
-              ]}>
-              <ThemedText style={styles.buttonLabel}>Cancel</ThemedText>
-            </Pressable>
-
-            {isEdit ? (
-              <Pressable
+          {showDeleteConfirm ? (
+            <View style={styles.actions}>
+              <ActionButton
+                label="Cancel"
+                kind="cancel"
+                disabled={deleteBudget.isPending}
+                onPress={() => setShowDeleteConfirm(false)}
+              />
+              <ActionButton
+                label="Confirm"
+                kind="danger"
+                busy={deleteBudget.isPending}
                 onPress={handleDelete}
+              />
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              <ActionButton label="Cancel" kind="cancel" disabled={isBusy} onPress={onDone} />
+              <ActionButton
+                label={isEdit ? 'Save' : 'Add'}
+                kind="primary"
+                busy={addBudget.isPending || updateBudget.isPending}
                 disabled={isBusy}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.button,
-                  { backgroundColor: theme.backgroundElement, opacity: pressed || isBusy ? 0.6 : 1 },
-                ]}>
-                <ThemedText themeColor="destructive" style={styles.buttonLabel}>
-                  Delete
-                </ThemedText>
-              </Pressable>
-            ) : null}
+                onPress={handleSave}
+              />
+            </View>
+          )}
 
+          {isEdit && !showDeleteConfirm ? (
             <Pressable
-              onPress={handleSave}
-              disabled={!isValid || isBusy}
+              onPress={() => setShowDeleteConfirm(true)}
               accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.button,
-                styles.primary,
-                {
-                  backgroundColor: theme.tint,
-                  opacity: !isValid || isBusy ? 0.4 : pressed ? 0.8 : 1,
-                },
-              ]}>
-              {isBusy ? (
-                <ActivityIndicator color={theme.onTint} />
-              ) : (
-                <ThemedText style={[styles.buttonLabel, { color: theme.onTint }]}>
-                  {isEdit ? 'Save' : 'Create'}
-                </ThemedText>
-              )}
+              style={({ pressed }) => [styles.link, { opacity: pressed ? 0.6 : 1 }]}>
+              <ThemedText style={[styles.linkText, { color: colors.link }]}>Delete Budget</ThemedText>
             </Pressable>
-          </View>
+          ) : null}
         </ScrollView>
-      </KeyboardAvoidingView>
 
       <PickerSheet
         visible={isPickerOpen}
@@ -241,70 +191,69 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
         onClose={() => setPickerOpen(false)}
         searchable
       />
-    </Screen>
+    </>
   );
 }
 
+const FIELD_HEIGHT = 48;
+const FIELD_RADIUS = 8;
+
+// Dimensions mirror the transaction form's, so the two sheets read as one family.
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  scroll: { flexGrow: 0 },
   content: {
-    padding: Spacing.three,
-    gap: Spacing.four,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+    gap: 12,
   },
-  field: {
-    gap: Spacing.two,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  categoryName: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  input: {
+  amountField: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.half,
-    height: 48,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    height: FIELD_HEIGHT,
+    gap: Spacing.two,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  inputText: {
-    flex: 1,
-    fontSize: 17,
-  },
-  amountRow: {
-    gap: Spacing.one,
-  },
-  currency: {
-    fontSize: 17,
+  currencySymbol: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   amountInput: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 16,
+    height: FIELD_HEIGHT,
     fontVariant: ['tabular-nums'],
-    padding: 0,
   },
-  error: {
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: FIELD_RADIUS,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 12,
+  },
+  errorText: {
+    flex: 1,
     fontSize: 14,
+    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
-    gap: Spacing.two,
+    gap: 12,
   },
-  button: {
-    flex: 1,
-    height: 48,
+  link: {
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.medium,
+    paddingVertical: 4,
   },
-  primary: {},
-  buttonLabel: {
-    fontSize: 17,
-    fontWeight: '600',
+  linkText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

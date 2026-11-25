@@ -15,11 +15,9 @@ export default function NewTransactionScreen() {
 
   return (
     <TransactionSheet onDismiss={() => router.back()}>
-      <TransactionForm
-        contentSized
-        state={initialFormState('add')}
-        onDone={() => router.back()}
-      />
+      {(dismiss) => (
+        <TransactionForm contentSized state={initialFormState('add')} onDone={dismiss} />
+      )}
     </TransactionSheet>
   );
 }
